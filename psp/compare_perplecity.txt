@@ -1,0 +1,88 @@
+Here are several approaches, from quick checks to thorough row-by-row diffs.
+
+## Quick row-count and aggregate check
+
+```sql
+SELECT
+    (SELECT COUNT(*) FROM TableA) AS CountA,
+    (SELECT COUNT(*) FROM TableB) AS CountB;
+```
+
+Useful as a sanity check, but won't tell you which rows differ.
+
+## Find rows that differ using EXCEPT
+
+`EXCEPT` returns rows from the first query that don't have an exact match in the second. This catches both missing rows and rows with differing column values, as long as you compare all columns.
+
+```sql
+-- Rows in TableA that are not in TableB (missing or different)
+SELECT * FROM TableA
+EXCEPT
+SELECT * FROM TableB;
+
+-- Rows in TableB that are not in TableA
+SELECT * FROM TableB
+EXCEPT
+SELECT * FROM TableA;
+```
+
+Run both directions — the first shows what changed/is-missing-from-B, the second shows what changed/is-missing-from-A. If a row appears in both result sets with the same key, it means that row exists in both tables but has different column values.
+
+## Pinpoint exactly which rows and columns changed (using a key)
+
+If you have a primary key (say `Id`), a more informative comparison joins on the key and flags mismatches per row, then you can drill into which columns differ:
+
+```sql
+SELECT
+    a.Id,
+    a.ColumnX AS A_ColumnX, b.ColumnX AS B_ColumnX,
+    a.ColumnY AS A_ColumnY, b.ColumnY AS B_ColumnY
+FROM TableA a
+FULL OUTER JOIN TableB b ON a.Id = b.Id
+WHERE
+    a.Id IS NULL          -- row exists only in B
+    OR b.Id IS NULL        -- row exists only in A
+    OR a.ColumnX <> b.ColumnX
+    OR a.ColumnY <> b.ColumnY
+    OR (a.ColumnX IS NULL AND b.ColumnX IS NOT NULL)
+    OR (a.ColumnX IS NOT NULL AND b.ColumnX IS NULL);
+```
+
+This is more verbose (you have to list every column, and handle NULLs explicitly since `NULL <> NULL` is unknown, not true), but it tells you row-by-row, column-by-column what's different — much better for reporting or debugging.
+
+## Hash-based comparison (fast, scales well, many columns)
+
+If the tables are wide or you have many columns, hashing each row lets you avoid writing out every column in the WHERE clause:
+
+```sql
+WITH HashA AS (
+    SELECT Id, HASHBYTES('SHA2_256',
+        CONCAT(ColumnX, '|', ColumnY, '|', ColumnZ)) AS RowHash
+    FROM TableA
+),
+HashB AS (
+    SELECT Id, HASHBYTES('SHA2_256',
+        CONCAT(ColumnX, '|', ColumnY, '|', ColumnZ)) AS RowHash
+    FROM TableB
+)
+SELECT
+    COALESCE(a.Id, b.Id) AS Id,
+    CASE
+        WHEN a.Id IS NULL THEN 'Missing in A'
+        WHEN b.Id IS NULL THEN 'Missing in B'
+        WHEN a.RowHash <> b.RowHash THEN 'Different'
+    END AS Status
+FROM HashA a
+FULL OUTER JOIN HashB b ON a.Id = b.Id
+WHERE a.Id IS NULL OR b.Id IS NULL OR a.RowHash <> b.RowHash;
+```
+
+Cast non-string columns to `NVARCHAR` inside the `CONCAT` if needed, and use a delimiter that can't appear in the data to avoid false matches from concatenation collisions (e.g. `'abc'+'d'` vs `'ab'+'cd'`).
+
+## Which approach fits your case?
+
+- No shared key, just want "are these tables identical" → `EXCEPT` both directions
+- Have a key, need to see exactly which columns changed → the `FULL OUTER JOIN` with explicit column comparisons
+- Wide tables, many columns, or doing this repeatedly/at scale → hash-based comparison
+
+Do your tables have a primary key or unique identifier you can join on, and roughly how many columns/rows are we talking about? That'll help me tailor the exact query (especially the NULL-handling and column list) to your case.

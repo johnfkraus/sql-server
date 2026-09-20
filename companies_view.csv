@@ -1,0 +1,6 @@
+company_id,company_name,headquarters,TotalRecords,TotalPages,sectors_list,countries_list
+5,Echo Software,Seattle,5,1,Technology,United States
+1,Acme Tech,San Francisco,5,1,Technology,"United States, France"
+2,BioHealth Labs,Paris,5,1,Healthcare,France
+4,Delta Energy,Houston,5,1,Energy,United States
+3,Capital Finance,Frankfurt,5,1,Finance,Germany

@@ -1,0 +1,10 @@
+.idea
+.vscode
+.DS_Store
+
+AdventureWorks2019.bak
+PASSWORD.TXT
+gemini.txt
+inspect-mssql-docker.json
+psp-companies-notes.txt
+schemas.sql
