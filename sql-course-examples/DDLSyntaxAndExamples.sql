@@ -259,7 +259,7 @@ Constraints can be:
 	- Col2 INT CONSTRAINT Constraint_Name2 CHECK (Col2>=0)
 
 - table-wide; involve several columns
-
+	- Put constraints at the end, after specifying the columns.
 
 **/
 
@@ -350,11 +350,14 @@ ADD CONSTRAINT Constraint_Name CHECK (Col1>=0 AND Col2='Value');
 
 ALTER TABLE Table_Name
 ADD CONSTRAINT Constraint_Name DEFAULT 'Default Value' FOR Col2 WITH VALUES;
-
+-- 'WITH VALUES', only applies if we supply a value for this field.
+-- will not automatically apply this default to any pre-existing rows
 ---------------------
 -- Add column and constraint
 ALTER TABLE Table_Name WITH NOCHECK
 ADD Col3 VARCHAR(50) NOT NULL CONSTRAINT Constraint_Name UNIQUE;
+-- NOCHECK means it will not check any existing values against the new constraint
+
 
 ALTER TABLE Table_Name WITH NOCHECK
 ADD Col3 VARCHAR(50) NOT NULL CONSTRAINT Constraint_Name CHECK (Col3>=0);
@@ -378,7 +381,42 @@ ADD CONSTRAINT CS_Global_Ranking_Un UNIQUE(Global_Ranking)
 ALTER TABLE Covid.Patient_Hospital WITH NOCHECK
 ADD CONSTRAINT CS_Global_Ranking_Def DEFAULT 'Happy' FOR Satisfaction WITH VALUES
 
+/*
+MS SQL SERVER ALTER table nocheck
 
+In **Microsoft SQL Server**, the `ALTER TABLE ... NOCHECK CONSTRAINT` statement is used to **disable** one or more **CHECK** or **FOREIGN KEY** constraints on a table. When disabled, the constraint is not enforced, allowing future **INSERT** or **UPDATE** operations that would otherwise violate the constraint rules.
+
+### Key Syntax and Usage
+
+*   **Disable a single constraint:**
+    ```sql
+    ALTER TABLE table_name NOCHECK CONSTRAINT constraint_name;
+    ```
+*   **Disable all constraints on a table:**
+    ```sql
+    ALTER TABLE table_name NOCHECK CONSTRAINT ALL;
+    ```
+
+### Important Distinctions
+
+*   **`NOCHECK` vs. `WITH NOCHECK`:**
+    *   `ALTER TABLE ... NOCHECK CONSTRAINT` **disables** the constraint.
+    *   `ALTER TABLE ... WITH NOCHECK ADD CONSTRAINT` **creates** a new constraint but does not validate existing data against it. The constraint remains **enabled** (trusted) for new data unless explicitly disabled afterward.
+*   **Re-enabling Constraints:**
+    *   To re-enable a disabled constraint without checking existing data:
+        ```sql
+        ALTER TABLE table_name CHECK CONSTRAINT constraint_name;
+        ```
+    *   To re-enable and **validate** existing data (fails if invalid data exists):
+        ```sql
+        ALTER TABLE table_name WITH CHECK CHECK CONSTRAINT constraint_name;
+        ```
+
+### Metadata Check
+You can verify the status of constraints using the `sys.check_constraints` and `sys.foreign_keys` system views:
+*   `is_disabled`: `1` if disabled, `0` if enabled.
+*   `is_not_trusted`: `1` if the constraint was added or re-enabled with `WITH NOCHECK` or if invalid data exists.
+*/
 
 --------------------------------------------------
 -- 7. Column constraints - drop
