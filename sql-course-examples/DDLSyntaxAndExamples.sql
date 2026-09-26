@@ -235,7 +235,34 @@ ALTER COLUMN [Num_Sequences_Total] DECIMAL(18,2)
 
 
 --------------------------------------------------
--- 5. Column constraints - create
+-- 5. Column constraints - create. 
+-- https://www.udemy.com/course/a-complete-course-in-sql-with-sql-server/learn/lecture/33797612#overview
+/**
+
+Control the quality of data in a column.
+Help transactional datbases maintan integrity and valid data.
+Often not available in big data or NOSQL databases.
+Helps implement business rules.
+
+Column constraints include:
+- Null
+- unique
+- check - lets you create a custom check on one or more columns; Example: make sure a patient's age is between 0 and 120.
+- default - Example: automatically insert the current date.
+
+Constraints can be:
+- unnamed; inline
+	- NOT NULL, UNIQUE, CHECK (Col3>=0), DEFAULT GETDATE(), DEFAULT 'Default_Value'
+
+- named; uses the keyword CONSTRAINT
+	- Col1 INT CONSTRAINT Constraint_Name UNIQUE
+	- Col2 INT CONSTRAINT Constraint_Name2 CHECK (Col2>=0)
+
+- table-wide; involve several columns
+
+
+**/
+
 
 ---------------------------------
 -- Syntax
