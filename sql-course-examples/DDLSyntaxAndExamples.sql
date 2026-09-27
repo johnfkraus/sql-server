@@ -356,11 +356,34 @@ ADD CONSTRAINT Constraint_Name DEFAULT 'Default Value' FOR Col2 WITH VALUES;
 -- Add column and constraint
 ALTER TABLE Table_Name WITH NOCHECK
 ADD Col3 VARCHAR(50) NOT NULL CONSTRAINT Constraint_Name UNIQUE;
--- NOCHECK means it will not check any existing values against the new constraint
+/*
+WITH NOCHECK has no effect here. 
 
+Per the Microsoft documentation:
+
+"The WITH NOCHECK option has no effect when you add PRIMARY KEY or UNIQUE constraints." 
+
+WITH NOCHECK (and WITH CHECK) only apply to CHECK and FOREIGN KEY constraints.  For UNIQUE and PRIMARY KEY constraints, SQL Server always validates existing data — the statement will fail if duplicates are found, regardless of whether you include WITH NOCHECK. 
+
+So in your statement, the WITH NOCHECK is simply ignored. The unique index is created and all existing rows in Col3 are checked for uniqueness. You can safely remove it without changing behavior:
+
+ALTER TABLE Table_Name
+ADD Col3 VARCHAR(50) NOT NULL CONSTRAINT Constraint_Name UNIQUE;
+*/
 
 ALTER TABLE Table_Name WITH NOCHECK
 ADD Col3 VARCHAR(50) NOT NULL CONSTRAINT Constraint_Name CHECK (Col3>=0);
+/*
+WITH NOCHECK tells SQL Server to skip validating existing rows against the new CHECK constraint.  The constraint is still created and enforced on all future INSERTs/UPDATEs, but any existing data is not checked — so if existing rows violate Col3 >= 0, the ALTER TABLE will still succeed.
+
+Two important side effects:
+
+The constraint is flagged as not trusted (is_not_trusted = 1 in sys.check_constraints), meaning the query optimizer will ignore it when generating execution plans. 
+To make it trusted later (after cleaning up any violating data), run:
+ALTER TABLE Table_Name WITH CHECK CHECK CONSTRAINT Constraint_Name;
+
+Without WITH NOCHECK, the default for a newly added constraint is WITH CHECK, which would validate all existing rows and fail the entire ALTER TABLE if any violate the constraint. 
+*/
 
 
 ---------------------------------
@@ -424,7 +447,7 @@ You can verify the status of constraints using the `sys.check_constraints` and `
 ---------------------------------
 -- Syntax
 
--- Drop primary key
+-- Drop primary key 
 SELECT	CONSTRAINT_NAME,
 		TABLE_SCHEMA,
 		TABLE_NAME,
@@ -448,6 +471,15 @@ DROP CONSTRAINT UQ_Patient_XXXXXXXXX
 
 ----------------------------------------------------
 -- 8. Primary key constraints
+
+/*
+A primary key uniquely identifies a row within a table.
+A primary key signifies that you can set up a relationship between it and a row in another table.
+A FK relationship constraint guarantees that the relationship between a primary key and a foreign key is enforced.  
+A foreign key may prevent you from deleting a row if it links to a row in another table.
+Constraints prevent orphaned records.
+ 
+*/
 
 ---------------------------------
 -- Syntax
@@ -525,6 +557,15 @@ ADD PRIMARY KEY(PK_ID)
 
 ----------------------------------------------------
 -- 9. Foreign Key 
+/*
+A foreign key is a key in a secondary table that you can join a primary key to.
+A foreign key constraint guarantees that the relationship between a primary key and a foreign key are enforced.
+A foreign key may prevent you from deleting a row if it links to a row in another table.
+Constraints prevent orphaned records.
+
+*/
+
+
 
 ---------------------------------
 -- Syntax
@@ -592,8 +633,117 @@ FOREIGN KEY (PK_Hospital_ID)  REFERENCES Covid.Hospital(PK_Hospital_ID)
 ----------------------------------------------------
 -- 10. Indexes
 
+/*
+Indexes affect query performance.
+Often designed incorrectly.
+A key place to look when optimising queries.
+
+By default, rows are stored in the heap.  To find data, you have to scan every item.
+An index works like a dictionary index.
+Types:
+- rowstore
+	- organized by rows
+	- includes clustered and non-clustered
+- columnstore
+	- organized by columns
+- clustered (b-tree)
+	- data is ordered
+	- We can only efficiently seek data from one column
+	- only one clustered index can exist per table
+- non-clustered
+	- up to 999 per table
+	- since only one clustered index can exist, for other fields we need non-clustered index.
+	- need to apply filters and joins on other columns
+
+Index strategy
+
+- Reduce the number of indexes for tables with a high number of updates.
+- Increase the use of indexes for tables with a high number of reads.
+- Create indexes on primary keys and foreign keys to improve joins.
+- You cannot index every data type.  Example, varchar(max) is not indexable.
+- Indexes are best used on highly unique columns.  Not if all the tables have the same values. 
+- Generally no need to index small tables.
+- Match the sort order of the index with the sort order of the queries.
+
+In SQL Server, the decision between a clustered and non-clustered index comes down to **how data is physically stored vs. how it is referenced**.
+
+* A **clustered index** defines the physical order of the rows on disk. The leaf nodes of the B-Tree *are* the data rows themselves. Because physical storage can only be sorted one way, you get **only 1 clustered index per table**.
+
+* A **non-clustered index** creates a separate, lightweight B-Tree structure containing only the indexed key columns and a pointer (the cluster key or row ID) back to the actual data. You can have **up to 999 non-clustered indexes per table**.
+
+---
+
+## When to Use a Clustered Index
+
+Because the table itself is sorted by this key, clustered indexes excel at retrieval patterns that involve sorting, range scans, or sequential key lookup.
+
+* **Primary Keys / Unique Identifiers:** Auto-incrementing integers (`IDENTITY`) or sequential IDs (`BIGINT`) make ideal clustered keys because new rows append cleanly to the end, preventing page splits.
+* **Range Scans (`BETWEEN`, `>`, `<`):** Queries filtering ranges (e.g., `WHERE OrderDate BETWEEN '2026-01-01' AND '2026-01-31'`) read contiguous memory pages on disk with minimal I/O overhead.
+* **Sorting (`ORDER BY`) & Grouping (`GROUP BY`):** If queries frequently request data sorted by a specific column (e.g., `ORDER BY TransactionDate`), SQL Server skips an expensive explicit sort operation.
+* **High-Frequency Point Lookups returning ALL columns:** Queries executing `SELECT * WHERE CustomerID = 1052` fetch all record fields instantly without additional lookups.
+
+---
+
+## When to Use a Non-Clustered Index
+
+Non-clustered indexes provide targeted lookup paths for queries filtering on columns other than your main table sorting key.
+
+* **Foreign Keys & Secondary Search Columns:** Useful when querying on fields distinct from your primary key, such as searching employees by `LastName` or orders by `CustomerID`.
+* **Exact Match Point Lookups (`=`):** Queries retrieving specific records based on unique attributes (e.g., `WHERE Email = 'user@example.com'`).
+* **Covering Queries (`INCLUDE` clause):** When non-clustered indexes store the key filtering columns and `INCLUDE` additional payload columns, SQL Server satisfies the query entirely within the index tree—avoiding costly Key Lookups back to the clustered table.
+* **Frequently Updated Columns:** Modifying non-clustered index key values reorders small index nodes without reordering the entire table on disk.
+
+---
+
+## Structural Comparison
+
+| Characteristic | Clustered Index | Non-Clustered Index |
+| --- | --- | --- |
+| **Limit per table** | Max **1** | Up to **999** |
+| **Physical Storage** | Rearranges actual data rows on disk | Separate index structure with pointers to data |
+| **Leaf Node Content** | Complete row data | Index keys + Clustering Key / RID |
+| **Best Column Choice** | Monotonic IDs, Dates, Primary Key | Foreign keys, filtering predicates, `JOIN` conditions |
+| **Write Impact** | Higher on key update/random insert (causes page splits) | Low-to-moderate per additional index |
+
+Creating a PK may automatically create a clustered index.
+
+*/
+
 ---------------------------------
 -- Syntax
+
+-- look for our constraints
+
+SELECT *
+FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+WHERE TABLE_NAME = 'Patient'
+
+-- delete the primary key PK_Patient....  for this exercise
+
+ALTER TABLE Covid.patient
+DROP CONSTRAINT PK__Patient__F4A24BC2BFE83DF6
+
+SELECT Age, Record_Created_Date
+FROM Covid.Patient
+WHERE Age = 35;
+
+-- select the above and click execution plan
+-- "scan" means it will scan all the records
+
+CREATE CLUSTERED INDEX IX_Clustered_Ex ON Covid.Patient (PK_ID);   
+-- we still have to scan through every record
+
+CREATE NONCLUSTERED INDEX IX_Nonclustered_Age ON Covid.Patient (Age);
+-- database decides to ignore our nonclustered index; too much trouble given there is little date here
+
+CREATE NONCLUSTERED INDEX IX_Nonclustered_Age_Inc ON Covid.Patient (Age)
+INCLUDE (Record_Created_Date)
+-- this is so the db doesn't have to look up Record_Created_Date
+-- NOW the db uses Index Seek, not scan every single record.
+
+-- DROP the index that isn't doing anything for us:
+DROP INDEX IX_Nonclustered_Age ON Covid.Patient
+
 
 -- Create clustered index 
 CREATE CLUSTERED INDEX IX_TableName_Col1 ON dbo.TableName (Col1);   
@@ -654,7 +804,18 @@ WHERE	Age = 35
 
 ----------------------------------------------------
 -- 11. CTE
+/*
+A CTE is a temporary named result set.
+CTE is used to group a complex query into a single result set that can be used in a subsequent query.
+Can make the code more readable.
+Can be used to execute recursive logic in a similar way that a for-loop iterates over a list.
 
+How to use a CTE
+- cannot use ORDER BY or INTO statements in a CTE
+- a CTE must be immediately followed by a single SELECT, INSERT, UPDATE, DELETE, or MERGE statement.
+- Could be used to to take two aggregates for example if you want to take your maximum average value.
+
+*/
 ---------------------------------
 -- Syntax
 

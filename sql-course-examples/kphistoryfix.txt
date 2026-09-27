@@ -1,0 +1,508 @@
+
+Gemini
+New chat
+Search chats
+Daily brief
+Images
+Videos
+Library
+New notebook
+SQL and Pandas Gaps and Islands
+Adding a Deleted Column in SQL Server
+Configuring SQL Server UK Dates
+Restoring SQL Server Backups in Docker
+Scheduling Jobs in SQL Server
+SQL Server Execution Plan in VS Code
+Clustered vs. Non-Clustered SQL Indexes
+"This is my song" was the theme for which movies?
+Case-Sensitive Sorting in SQL Server
+Understanding TOP (1000) in SQL Server
+Case-Insensitive Sorting in SQL Server
+Lifespan of SQL Server Global Temporary Tables
+Creating Restore Points in MS SQL Server
+Cross-Database Relational Integrity in SQL Server
+Understanding Quality Gates in SQL Server
+Generating ERDs in SQL Server
+SQL Pagination and Sector Filtering
+Connecting to MS SQL Server in Docker on macOS
+SQL Server JSON Company Data Representation
+Uninstalling Pip Packages in Conda
+Fixing PyCharm Conda Envs_dirs Error
+Dry Run for Git Add
+Building a Python Wheel Package
+Pydantic V2 Ellipsis Usage
+How to Disable Chrome Tab Groups
+Changing iPhone 12 Wallpaper
+Conversation with Gemini
+I have a table of companyid, foid and fyear. I want to group the rows that have the same companyiod, foid, and that have years that are not more than one different than any other fyear in the group. In other words, 2020, 2021 and 2022 should be in a group together, but 2024 should not be in that group.
+
+This problem is commonly known as a Gaps and Islands problem in SQL and Data Analysis. The goal is to detect sequences of contiguous consecutive years for each (companyid, foid) pair and assign a unique group identifier to each continuous island.
+
+Here are solutions in SQL and Pandas (Python).
+
+Method 1: SQL Solution (Standard SQL / Window Functions)
+The most robust way to solve this in SQL is by subtracting an incrementing sequence (ROW_NUMBER()) from the fyear. For contiguous years, both numbers increment by 1 at the same rate, making their difference constant. When a gap occurs, the difference changes, creating a distinct group_id.
+
+SQL
+WITH RankedData AS (
+    SELECT 
+        companyid,
+        foid,
+        fyear,
+        -- Subtract row number from fyear to identify contiguous blocks
+        fyear - ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid 
+            ORDER BY fyear
+        ) AS grp_offset
+    FROM dbo.kphistory
+)
+SELECT 
+    companyid,
+    foid,
+    fyear,
+    -- Generate a clean group ID per continuous block
+    DENSE_RANK() OVER (
+        PARTITION BY companyid, foid 
+        ORDER BY grp_offset
+    ) AS group_id
+FROM RankedData
+ORDER BY companyid, foid, fyear;
+How it works step-by-step:
+Suppose you have years 2020, 2021, 2022, 2024:
+
+fyear	ROW_NUMBER()	fyear - ROW_NUMBER() (grp_offset)	Resulting Group
+2020	1	2019	Group 1
+2021	2	2019	Group 1
+2022	3	2019	Group 1
+2024	4	2020	Group 2
+Method 2: Python (Pandas Dataframe)
+In Pandas, you can detect gaps where the difference between consecutive sorted years is greater than 1, calculate a cumulative sum to create group markers, and group accordingly:
+
+Python
+import pandas as pd
+
+# Sample DataFrame
+df = pd.DataFrame(
+    {
+        "companyid": [1, 1, 1, 1, 2, 2],
+        "foid": [10, 10, 10, 10, 20, 20],
+        "fyear": [2020, 2021, 2022, 2024, 2018, 2019],
+    }
+)
+
+# 1. Ensure rows are sorted
+df = df.sort_values(["companyid", "foid", "fyear"])
+
+# 2. Identify where fyear gaps are > 1
+is_new_group = (
+    df.groupby(["companyid", "foid"])["fyear"].diff() > 1
+)
+
+# 3. Create group IDs by cumulative sum of gaps
+df["group_id"] = (
+    df.groupby(["companyid", "foid"]).ngroup().astype(str)
+    + "_"
+    + is_new_group.cumsum().astype(str)
+)
+
+print(df)
+Output:
+
+Plaintext
+   companyid  foid  fyear group_id
+0          1    10  2020      0_0
+1          1    10  2021      0_0
+2          1    10  2022      0_0
+3          1    10  2024      0_1
+4          2    20  2018      1_1
+5          2    20  2019      1_1
+Method 3: Aggregating Min/Max fyear per Group
+If you want to collapse the group into single summary rows showing start and end fyear for each continuous range:
+
+SQL
+WITH RankedData AS (
+    SELECT 
+        companyid,
+        foid,
+        fyear,
+        fyear - ROW_NUMBER() OVER (PARTITION BY companyid, foid ORDER BY fyear) AS grp_offset
+    FROM dbo.kphistory
+)
+SELECT 
+    companyid,
+    foid,
+    MIN(fyear) AS start_year,
+    MAX(fyear) AS end_year,
+    COUNT(*) AS total_years
+FROM RankedData
+GROUP BY companyid, foid, grp_offset
+ORDER BY companyid, foid, start_year;
+Would you like this formatted for a specific SQL dialect (PostgreSQL, SQL Server, MySQL, BigQuery)?
+
+Yes
+This is for ms sql server; I would like every group to have a unique id.
+
+In SQL Server, you can generate a globally unique identifier for every continuous group across the entire dataset by using DENSE_RANK() without partitioning by companyid and foid in the outer layer.
+
+Here are two approaches tailored for MS SQL Server: returning all detailed rows with a unique group ID, or returning summary group records.
+
+Option 1: Detailed Rows with Global Unique GroupID
+If you want every original row tagged with a global sequential integer GroupID (1, 2, 3, ...):
+
+SQL
+WITH GroupedData AS (
+    SELECT 
+        companyid,
+        foid,
+        fyear,
+        -- Group identifier per (companyid, foid) combination
+        fyear - ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid 
+            ORDER BY fyear
+        ) AS grp_offset
+    FROM dbo.kphistory
+)
+SELECT 
+    companyid,
+    foid,
+    fyear,
+    -- Generates a unique integer ID across the entire table
+    DENSE_RANK() OVER (
+        ORDER BY companyid, foid, grp_offset
+    ) AS GroupID
+FROM GroupedData
+ORDER BY GroupID, fyear;
+Option 2: Generating GUIDs / UUIDs as Unique Group IDs
+If you need a unique 128-bit UNIQUEIDENTIFIER (UUID) for each group rather than sequential integers:
+
+SQL
+WITH GroupedData AS (
+    SELECT 
+        companyid,
+        foid,
+        fyear,
+        fyear - ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid 
+            ORDER BY fyear
+        ) AS grp_offset
+    FROM dbo.kphistory
+),
+GroupMap AS (
+    SELECT 
+        companyid,
+        grp_offset,
+        NEWID() AS GroupUUID
+    FROM GroupedData
+    GROUP BY companyid, foid, grp_offset
+)
+SELECT 
+    g.companyid,
+    g.foid,
+    g.fyear,
+    m.GroupUUID
+FROM GroupedData g
+JOIN GroupMap m 
+    ON g.companyid = m.companyid 
+   AND g.grp_offset = m.grp_offset
+ORDER BY g.companyid, g.foid, g.fyear;
+Option 3: Summarized Output (Group Table)
+If you want one record per island group showing start fyear, end fyear, and total count:
+
+Relational Database Structure, AI generated
+Relational Database Structure. Source: Creately
+SQL
+WITH GroupedData AS (
+    SELECT 
+        companyid,
+        foid,
+        fyear,
+        fyear - ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid 
+            ORDER BY fyear
+        ) AS grp_offset
+    FROM dbo.kphistory
+)
+SELECT 
+    ROW_NUMBER() OVER (ORDER BY companyid, foid, MIN(fyear)) AS GroupID,
+    companyid,
+    foid,
+    MIN(fyear) AS StartYear,
+    MAX(fyear) AS EndYear,
+    COUNT(*) AS TotalYears
+FROM GroupedData
+GROUP BY companyid, foid, grp_offset
+ORDER BY GroupID;
+Sample Results
+Given input data:
+
+companyid	foid	fyear
+1	10	2020
+1	10	2021
+1	10	2022
+1	10	2024
+2	20	2018
+2	20	2019
+Option 1 Output:
+
+companyid	foid	fyear	GroupID
+1	10	2020	1
+1	10	2021	1
+1	10	2022	1
+1	10	2024	2
+2	20	2018	3
+2	20	2019	3
+Would you like to write these results directly into a new SQL table or view?
+
+Yes
+I now want to select the row in each group containing the maximum fyear value.
+
+To select the row with the maximum fyear in each group in SQL Server, you can extend the Common Table Expression (CTE) using ROW_NUMBER() ordered by fyear DESC within each group, or simply group by the calculated island key and select MAX(fyear).
+
+Query execution on structured records, AI generated
+Query execution on structured records. Source: Mary-Ang / Getty Images
+Option 1: Simple Aggregation (GROUP BY)
+If your original table only contains companyid, foid, and fyear (or if you only need these columns), group by the island offset key directly:
+
+SQL
+WITH GroupedData AS (
+    SELECT 
+        companyid,
+        foid,
+        fyear,
+        fyear - ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid 
+            ORDER BY fyear
+        ) AS grp_offset
+    FROM dbo.kphistory
+)
+SELECT 
+    companyid,
+    foid,
+    MAX(fyear) AS fyear,
+    DENSE_RANK() OVER (ORDER BY companyid, foid, grp_offset) AS GroupID
+FROM GroupedData
+GROUP BY companyid, foid, grp_offset
+ORDER BY GroupID;
+Option 2: ROW_NUMBER() DESC (Best if you have extra columns)
+If your table has other columns (e.g., amount, status, created_date) and you want to retrieve the complete row corresponding to the maximum fyear of each island group:
+
+SQL
+WITH GroupedData AS (
+    SELECT 
+        *,
+        fyear - ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid 
+            ORDER BY fyear
+        ) AS grp_offset
+    FROM dbo.kphistory
+),
+RankedInGroup AS (
+    SELECT 
+        *,
+        DENSE_RANK() OVER (ORDER BY companyid, foid, grp_offset) AS GroupID,
+        ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid, grp_offset 
+            ORDER BY fyear DESC
+        ) AS rn
+    FROM GroupedData
+)
+SELECT 
+    companyid,
+    foid,
+    fyear,
+    GroupID
+    -- Select any other original columns here
+FROM RankedInGroup
+WHERE rn = 1
+ORDER BY GroupID;
+Output Example
+Given the input data:
+
+companyid	foid	fyear
+1	10	2020
+1	10	2021
+1	10	2022
+1	10	2024
+2	20	2018
+2	20	2019
+Result:
+
+companyid	foid	fyear	GroupID
+1	10	2022	1
+1	10	2024	2
+2	20	2019	3
+Would you like to include additional columns or filter the groups further?
+
+Yes
+I want to select the row in each group containing the maximum fyear value. If the value for 'active' is 0, update the value for 'deleted' to 1.
+
+To perform an UPDATE in SQL Server on a subset of rows identified using Common Table Expressions (CTEs) and window functions, you can run an UPDATE directly against the CTE. SQL Server allows updating CTEs as long as the underlying target table rows are deterministically referenced.
+
+Database Query Execution, AI generated
+Database Query Execution. Source: Mary-Ang / Getty Images
+MS SQL Server UPDATE Statement
+SQL
+WITH GroupedData AS (
+    SELECT 
+        companyid,
+        foid,
+        fyear,
+        active,
+        deleted,
+        -- Identify continuous gaps and islands
+        fyear - ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid 
+            ORDER BY fyear
+        ) AS grp_offset
+    FROM dbo.kphistory
+),
+RankedInGroup AS (
+    SELECT 
+        companyid,
+        foid,
+        fyear,
+        active,
+        deleted,
+        -- Identify the row with the maximum fyear in each group
+        ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid, grp_offset 
+            ORDER BY fyear DESC
+        ) AS rn
+    FROM GroupedData
+)
+UPDATE RankedInGroup
+SET deleted = 1
+WHERE rn = 1           -- Row with maximum fyear in the group
+  AND active = 0;      -- Condition: active value is 0
+How It Works
+GroupedData CTE: Uses fyear - ROW_NUMBER() to assign the continuous group identifier (grp_offset) to every row.
+
+RankedInGroup CTE: Ranks the rows within each island group by fyear DESC so that rn = 1 represents the latest fyear in that continuous group.
+
+UPDATE statement: Targets RankedInGroup directly, filtering for rn = 1 and active = 0, updating the deleted column in the underlying base table to 1.
+
+Verification Query (SELECT before UPDATE)
+If you want to preview which rows will be modified prior to executing the UPDATE, run this SELECT first:
+
+SQL
+WITH GroupedData AS (
+    SELECT 
+        *,
+        fyear - ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid 
+            ORDER BY fyear
+        ) AS grp_offset
+    FROM dbo.kphistory
+),
+RankedInGroup AS (
+    SELECT 
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid, grp_offset 
+            ORDER BY fyear DESC
+        ) AS rn
+    FROM GroupedData
+)
+SELECT companyid, foid, fyear, active, deleted
+FROM RankedInGroup
+WHERE rn = 1 
+  AND active = 0;
+Do you want to update all other non-max-fyear rows in the group as well?
+
+Yes
+List all the groups that contain only one row.
+
+To select all groups (islands of consecutive years) that contain only a single row, you can group by the island offset key and use a HAVING COUNT(*) = 1 clause.
+
+Database relational table schema structure, AI generated
+Database relational table schema structure. Source: traffic_analyzer / Getty Images
+Option 1: Returning Single-Row Groups with Single Rows
+This query retrieves the exact rows that belong to single-fyear groups along with their global group identifier:
+
+SQL
+WITH GroupedData AS (
+    SELECT 
+        companyid,
+        foid,
+        fyear,
+        -- Group identifier per (companyid, foid) continuous sequence
+        fyear - ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid 
+            ORDER BY fyear
+        ) AS grp_offset
+    FROM dbo.kphistory
+),
+GroupCounts AS (
+    SELECT 
+        companyid,
+        foid,
+        grp_offset,
+        COUNT(*) AS group_size,
+        DENSE_RANK() OVER (ORDER BY companyid, foid, grp_offset) AS GroupID
+    FROM GroupedData
+    GROUP BY companyid, foid, grp_offset
+    HAVING COUNT(*) = 1
+)
+SELECT 
+    g.companyid,
+    g.foid,
+    g.fyear,
+    gc.GroupID
+FROM GroupedData g
+JOIN GroupCounts gc 
+    ON g.companyid = gc.companyid 
+   AND g.grp_offset = gc.grp_offset
+ORDER BY gc.GroupID;
+Option 2: Returning Aggregated Group Summary
+If you prefer a summary list showing each single-row group ID, company ID, foid, and fyear:
+
+SQL
+WITH GroupedData AS (
+    SELECT 
+        companyid,
+        foid,
+        fyear,
+        fyear - ROW_NUMBER() OVER (
+            PARTITION BY companyid, foid 
+            ORDER BY fyear
+        ) AS grp_offset
+    FROM dbo.kphistory
+)
+SELECT 
+    DENSE_RANK() OVER (ORDER BY companyid, foid, grp_offset) AS GroupID,
+    companyid,
+    foid,
+    MAX(fyear) AS fyear,
+    COUNT(*) AS total_rows
+FROM GroupedData
+GROUP BY companyid, foid, grp_offset
+HAVING COUNT(*) = 1
+ORDER BY GroupID;
+Sample Results Demonstration
+Given sample input:
+
+companyid	foid	fyear
+1	10	2020
+1	10	2021
+1	10	2022
+1	10	2024
+2	20	2018
+2	20	2019
+Group 1: 2020, 2021, 2022 (3 rows)
+
+Group 2: 2024 (1 row)
+
+Group 3: 2018, 2019 (2 rows)
+
+Output:
+
+companyid	foid	fyear	GroupID
+1	10	2024	2
+Would you like to delete or perform an action on these single-row groups?
+
+Yes
+
+
+
+Gemini is AI and can make mistakes.
+

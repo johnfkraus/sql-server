@@ -1,0 +1,4 @@
+companyid	fyear	foid
+5	2026	105
+6	2026	105
+8	2026	101
