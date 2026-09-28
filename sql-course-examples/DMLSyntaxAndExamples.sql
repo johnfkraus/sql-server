@@ -183,6 +183,9 @@ TRUNCATE TABLE TableName;
 ---------------------------------
 -- Example
 
+USE SQL_Course
+GO
+
 SELECT *
 INTO [Covid].[Covid_Variant_Copy]
 FROM [Covid].[Covid_Variant]
@@ -194,6 +197,7 @@ FROM [Covid].[Covid_Variant_Copy]
 SET STATISTICS TIME ON;
 
 DELETE FROM [Covid].[Covid_Variant_Copy]
+-- 118 ms
 
 /* Switch off statistics time */
 SET STATISTICS TIME OFF; 
@@ -207,6 +211,8 @@ WHERE Num_Sequences_Total > 2
 SET STATISTICS TIME ON;
 
 TRUNCATE TABLE [Covid].[Covid_Variant_Copy]
+--  SQL Server Execution Times:
+--   CPU time = 4 ms,  elapsed time = 6 ms.
 
 /* Switch off statistics time */
 SET STATISTICS TIME OFF; 

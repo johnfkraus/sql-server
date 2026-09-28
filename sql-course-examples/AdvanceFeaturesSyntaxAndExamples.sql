@@ -6,6 +6,18 @@
 
 --------------------------------------------------
 -- 1. Views
+/*
+A view is virtual table.
+A view contains data from one or more tables.
+- does not contain data itself
+- can control security and access to a view as with a table
+- use a view for complex table joins that need to be reused.
+- use views to control access to data 
+- add calculated fields or rename them
+
+*/
+
+
 
 ---------------------------------
 -- Syntax
@@ -29,6 +41,8 @@ FROM	TableA a INNER JOIN
 
 ---------------------------------
 -- Example
+
+DROP TABLE Covid.Covid_Variant_Copy
 
 CREATE VIEW [Covid].[Covid_Patient]
 AS
@@ -56,9 +70,18 @@ SELECT	*
 FROM	[Covid].[Covid_Patient] 
 
 
-
 --------------------------------------------------
 -- 2. Stored procedures and parameters
+/*
+- A set of operations that make a complete procedure.
+- Could exercise an entire business operation.
+- more powerful than a view
+- works similar to a function
+	- wider scope than function as it can execute an entire operation
+- execution plan is stored for faster run times on subsequent operations
+
+*/
+
 
 ---------------------------------
 -- Syntax
@@ -68,7 +91,7 @@ CREATE PROCEDURE dbo.uspStoredProcName
     @Param2 VARCHAR(50)
 AS
 
-    SET NOCOUNT ON;
+    SET NOCOUNT ON;  -- don't return number of rows affected; speeds things up
 
     SELECT	Col1, Col2
     FROM	dbo.TableName
@@ -80,6 +103,51 @@ IF OBJECT_ID ( 'dbo.uspStoredProcName', 'P' ) IS NOT NULL
 GO
 
 EXECUTE dbo.uspStoredProcName @Param1 = N'Value1', @Param2 = N'Value2';
+
+-- jk examples
+
+CREATE PROCEDURE Covid.usp_get_covid_patient
+AS
+BEGIN
+	SELECT *
+	FROM [Covid].[Patient]
+END
+
+
+EXEC COVID.usp_get_covid_patient
+
+
+CREATE PROCEDURE Covid.usp_get_specific_covid_patient
+	@PK_ID INT,
+	@Age INT
+AS
+BEGIN
+	SELECT *
+	FROM [Covid].[Patient] p
+	WHERE p.PK_ID = @PK_ID AND p.Age = @Age
+END
+
+EXEC Covid.usp_get_specific_covid_patient 1,56
+
+IF OBJECT_ID('[Covid].[usp_get_specific_covid_patient]', 'p') IS NOT NULL
+DROP PROCEDURE Covid.usp_get_specific_covid_patient
+
+IF OBJECT_ID('[Covid].[usp_get_covid_patient]', 'p') IS NOT NULL
+DROP PROCEDURE Covid.usp_get_Covid_patient
+
+
+USE SQL_Course
+GO
+
+
+
+
+
+
+
+
+
+
 
 
 
