@@ -136,21 +136,6 @@ IF OBJECT_ID('[Covid].[usp_get_covid_patient]', 'p') IS NOT NULL
 DROP PROCEDURE Covid.usp_get_Covid_patient
 
 
-USE SQL_Course
-GO
-
-
-
-
-
-
-
-
-
-
-
-
-
 ---------------------------------
 -- Example
 
@@ -184,7 +169,6 @@ IF OBJECT_ID ('Covid.usp_get_covid_patient', 'P' ) IS NOT NULL
 GO
 
 DROP PROCEDURE Covid.usp_get_specific_covid_patient 
-
 
 
 --------------------------------------------------
