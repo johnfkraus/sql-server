@@ -225,7 +225,7 @@ SELECT @Ret_Code
 
 
 ---------------------------------
--- Example
+-- Example stored procedure with return value
 
 -------------------------
 CREATE PROCEDURE Covid.usp_insert_patient
@@ -290,7 +290,12 @@ PRINT @Status
 
 
 --------------------------------------------------
--- 4. Functions - scaler
+-- 4. Functions - scalar
+
+A scalar-valued function takes one or more values and returns a single value.
+You don't have to write the same piece of code repeatedly.
+A scalar is a number with a magnitude, like 1,2 or 3.
+
 
 ---------------------------------
 -- Syntax
@@ -454,6 +459,42 @@ FROM [Covid].[UDF_Miltiline_Covid_Patient] ('Angola','Omicron')
 
 --------------------------------------------------
 -- 5. Transactions
+
+Pessimestic concurrency
+- assumes there will always be a problem/conflict
+- lock table down
+- if user a is accessing a table, all other users must wait until user a is finished.
+- can specify lock mode
+	- (a) let others read the table while you are doing an update, or (b) make it exclusive, so that you are the only person who can interact with that table.
+
+Optimistic concurrency
+- Rather than locking rows in a table so that only we can use it, We assume that the table is not going to get updated.  If there is a violation, one of the changes gets discarded.
+- Good for environments with low contention for data
+	- read record first
+	- check that no one else has changed it since we read it
+		- if we find the data was changed by another user (a violation), the database can decide to reject either our update or the other users' update.
+	- apply our updates
+
+ACID
+Atomicity-all operations must be performed successfully or all will be rolled back.
+
+Consistency-updated data must respect the other rules in the database such as constraints and triggers so that all the data remains consistent in the database.
+
+Isolation-modifications in one transaction should not affect modifications in another transaction.  The two transactions must be isolated from each other.
+
+Durable-Committed transactions must be committed to permanent storage, not volatile memory.
+
+Transaction types
+
+- auto commit - each individual statement is a transaction; if error, it will be rolled back.
+Happens automatically
+
+- explicit transaction - starts with a BEGIN TRANSACTION statement and is explicitly ended with a COMMIT or ROLLBACK statement.
+
+
+- implicit transaction - implicitly started, but explicitly ended with either a COMMIT or ROLLBACK statement.
+
+
 
 ---------------------------------
 -- Syntax

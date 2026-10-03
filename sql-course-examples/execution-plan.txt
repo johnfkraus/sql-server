@@ -1,0 +1,122 @@
+
+Gemini
+New chat
+Search chats
+Daily brief
+Images
+Videos
+Library
+New notebook
+Scheduling Jobs in SQL Server
+SQL Server Execution Plan in VS Code
+Clustered vs. Non-Clustered SQL Indexes
+"This is my song" was the theme for which movies?
+Case-Sensitive Sorting in SQL Server
+Understanding TOP (1000) in SQL Server
+Case-Insensitive Sorting in SQL Server
+Lifespan of SQL Server Global Temporary Tables
+Creating Restore Points in MS SQL Server
+"No Bands" Sign Description
+Cross-Database Relational Integrity in SQL Server
+Understanding Quality Gates in SQL Server
+Generating ERDs in SQL Server
+Connecting to MS SQL Server in Docker on macOS
+SQL Server JSON Company Data Representation
+Uninstalling Pip Packages in Conda
+Fixing PyCharm Conda Envs_dirs Error
+Dry Run for Git Add
+Building a Python Wheel Package
+Pydantic V2 Ellipsis Usage
+How to Disable Chrome Tab Groups
+Changing iPhone 12 Wallpaper
+Philadelphia Zoo Sunday Parking Guide
+High-Rise Tower Steel Reinforcement Estimate
+Why Avoid Spaces in Filenames
+SSMS Alternatives for macOS Docker
+Understanding the Cruller Pastry
+Conversation with Gemini
+In ms sql server, using vs code as client, how do I show execution plan?
+
+To view query execution plans for MS SQL Server in Visual Studio Code, use the official SQL Server (mssql) extension by Microsoft, which features an integrated Query Plan Visualizer.   
+Microsoft Developer Blogs
+
+Prerequisites
+Make sure you have the official extension installed:
+
+Open VS Code.
+
+Go to the Extensions view (Ctrl+Shift+X on Windows/Linux or Cmd+Shift+X on macOS).   
+Microsoft Learn
+
+Search for SQL Server (mssql) and click Install.   
+Microsoft Learn
+
+Connect to your SQL Server database instance.   
+SQLServerCentral
+
+Step-by-Step Instructions
+Option 1: Estimated Execution Plan (No Query Run)
+Use this option to preview how the query optimizer will process your query without actually running it against your data.   
+Microsoft Learn
+
+Open your .sql file in VS Code and connect to your SQL Server database.   
+SQLServerCentral
+
+Highlight the SQL query you want to analyze.
+
+Look at the Query Toolbar in the top-right corner of your editor/results pane.
+
+Click the Estimated Plan icon (it looks like a flowchart/diagram).   
+Microsoft Learn
+
+An interactive Query Plan Visualizer tab will open showing the planned operations and estimated costs.   
+Microsoft Learn
+
+Option 2: Actual Execution Plan (Runs Query)
+Use this option to view performance details (such as actual row counts and elapsed time) from an actual execution.   
+Microsoft Learn
+
+In your .sql file, highlight your query.
+
+Click the Enable Actual Plan button in the query toolbar (located next to the Estimated Plan icon).   
+Microsoft Learn
+
+Execute your query by pressing Ctrl+Shift+E (or clicking Execute Query).
+
+Alongside your query results grid, a Query Plan tab will open containing the graphical execution plan.
+
+Key Features of the Query Plan Visualizer
+Interactive Nodes: Click on any node/operator in the plan to expand tooltips with detailed metrics (such as operator cost, CPU time, and I/O cost).   
+Microsoft Learn
+
+Highlighting High-Cost Steps: Use the dropdown toolbar at the top of the plan visualizer to select metrics like Subtree Cost, Actual Elapsed Time, or Number of Rows Read to automatically highlight performance bottlenecks.   
+Microsoft Learn
+
+Exporting & Inspection: Use the right-hand panel in the visualizer tab to Save Plan as a .sqlplan file or select Open XML to view the underlying execution XML directly.   
+Microsoft Learn
+
+Alternative Method (T-SQL Commands)
+If you prefer raw XML plans directly in the text results, wrap your SQL statements with T-SQL session settings:
+
+SQL
+-- For an Estimated XML Plan:
+SET SHOWPLAN_XML ON;
+GO
+SELECT * FROM YourTable WHERE Column = 'Value';
+GO
+SET SHOWPLAN_XML OFF;
+GO
+
+-- For an Actual XML Plan:
+SET STATISTICS XML ON;
+GO
+SELECT * FROM YourTable WHERE Column = 'Value';
+GO
+SET STATISTICS XML OFF;
+GO
+
+
+
+Gemini is AI and can make mistakes.
+
+Searching the web
