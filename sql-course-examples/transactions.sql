@@ -1,7 +1,8 @@
 BEGIN TRANSACTION
     BEGIN TRY
         DECLARE @TestVar INT
-        SELECT @TestVar = 'Error'
+        -- SELECT @TestVar = 'Error'
+        SELECT @TestVar = 1
     END TRY
     -- catch errors
     BEGIN CATCH

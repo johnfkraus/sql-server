@@ -558,6 +558,15 @@ END
 --------------------------------------------------
 -- 6. Cursors
 
+Cursor is same as a for while loop.
+Enables you to loop through a set of data and process one row at a time.
+Inefficient at inserting, updating or deleting data because they do it one row at a time.
+Most SQL operations work on a set of data rather than working on each row individually.
+Avoid using cursors to loop through data and operate on each row individually.
+
+Cursors can be useful for database administration.  For example, if you wanted to change all the schemas of your tables.
+
+
 ---------------------------------
 -- Syntax
 DECLARE @Col1 INT, @Col2 INT
@@ -571,7 +580,7 @@ OPEN My_Cursor
 FETCH NEXT FROM My_Cursor   
 INTO @Col1, @Col2  
   
-WHILE @@FETCH_STATUS = 0  
+WHILE @@FETCH_STATUS = 0  -- 0 means hasn't finished yet
 BEGIN  
     -- Run SQL  
 	SELECT @Col1, @Col2  
@@ -581,7 +590,7 @@ BEGIN
 END   
 
 CLOSE My_Cursor ;  
-DEALLOCATE My_Cursor;  
+DEALLOCATE My_Cursor;  -- remove cursor from memory
 
 ---------------------------------
 -- Example
