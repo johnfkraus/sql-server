@@ -2,25 +2,60 @@
 Concept for populating the PSP2 CompanyGroup and CompanyKeyPartner database tables 
 with data from PSP1.
 
-This creates a row in CompanyGroup and uses the id from the CompanyGroup row in creating
-a row in CompanyKeyPartner.  It might be suitable to perform both operations atomically within
-a transaction.
+Shout out to Google Gemini for helping with this.
 
-A log is written to a IngestStatus table describing the success or failure.
+PSP1 KP health data shall be provisioned in a staged_data table.  
+
+A stored procedure accepts the staged_data table as a parameter.  The procedure evaluates each row 
+of the staged_data table.  If the row is valid, records are entered into both the CompanyGroup table
+and the CompanyKeyPartner table in an atomic transaction.
+
+The staged_data table contains one row for every active key partner company and possibly some extra rows for invalid companies found in 1.0.  Health data is included from 1.0 when available.  
+
+The staged data consists of:
+A vertical stack of:
+1. The 1.0 history data for companies with valid 2.0 ids (completed Friday 9/2); plus
+2. The 1.0 history data for companies which lacked valid 2.0 ids; most of these have been 
+mapped to 2.0 company ids (completed Friday).
+Joined on company ids with 
+3. the complete list of active key partner companies (companyid, fieldofficeid, fiscal year); this 
+data exists.  
+
+For staging, the above should give us a complete list of active KP companies, with health data where available.
+
+For each row of staged data, a log record is written to an IngestStatus table describing whether processing succeeded or recording any errors.
 
 Prerequisites:
 
-The PSP1 data is staged with correct company ids.  I was able to map all but seven companies
-in the PSP1 health data to actual companies from the PSP2 Company table.
+Discard dummy tables created for testing.
 
+Fix fake column names used below.  Make sure the columns referred to in the stored procedure match up with the column names in the real CompanyGroup and CompanyKeyPartner table.
 
+PSP 2.0 has a set of canonical company ids.  Some PSP 1.0 companies are referred to by company ids that don't comply with the 2.0 company ids.  In order for a company in the staged_data table to be added to the PSP2 CompanyGroup and CompanyKeyPartner tables, the following requirements must be met.
 
-Delete all KP companies (GroupID = 3) from the
+- Valid 2.0 company id.  I was able to map all but seven companies in the PSP1 health data to actual companies from the PSP2 Company table.
+- Valid field office ids.
+- No identical record already exists in the CompanyGroup table.  (I assume we drop all KP records in CompanyGroup)
+- A company must be added to BOTH the CompanyGroup and CompanyKeyPartner tables or else the transaction fails.
 
+- The number of rows in the CompanyKeyPartner table must match the number of actual active key partners (400 or so). 
+- Companies that can't be mapped to valid 2.0 company ids should not appear in the KP health data page.
+- There should be 10 active key partners from Albuquerque.
+- All the key partner companies must be in the staged_data table (company id, field office id, 
+companygroupid).
+- The staged_data table can have more rows than there are key partners, because some of those
+rows won't be added to the CompanyKeyPartner table due to invalid company ids or whatever.
 
+Before running the stored procedure:
+
+With backups as deemed necessary:
+- Delete all KP companies (GroupID = 3) from the CompanyGroup table.
+- Truncate the CompanyKeyPartner table.
 
 -- USE some_demo_database
 -- GO
+
+-- Dummy tables for testing only
 
 -- Company Table
 CREATE TABLE Company (
@@ -46,12 +81,28 @@ CREATE TABLE CompanyGroup (
     ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyGroup_ModifiedBy DEFAULT SYSTEM_USER
 );
 
--- CompanyKeyPartner Table
+-- CompanyKeyPartner Table -- no FK
+-- CREATE TABLE CompanyKeyPartner (
+--     id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_CompanyKeyPartner PRIMARY KEY,
+--     companyid INT NULL,
+--     fieldofficeid INT NULL,
+--     companygroupid INT NULL,
+--     fiscalyear INT NULL,
+--     wtf1 INT NULL,
+--     wtf2 INT NULL,
+--     wtf3 INT NULL,
+--     Created DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Created DEFAULT GETDATE(),
+--     CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_CreatedBy DEFAULT SYSTEM_USER,
+--     Modified DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Modified DEFAULT GETDATE(),
+--     ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_ModifiedBy DEFAULT SYSTEM_USER
+-- );
+
+-- with FK
 CREATE TABLE CompanyKeyPartner (
     id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_CompanyKeyPartner PRIMARY KEY,
     companyid INT NULL,
     fieldofficeid INT NULL,
-    companygroupid INT NULL,
+    companygroupid INT NOT NULL, -- Must match type of CompanyGroup.id
     fiscalyear INT NULL,
     wtf1 INT NULL,
     wtf2 INT NULL,
@@ -59,8 +110,14 @@ CREATE TABLE CompanyKeyPartner (
     Created DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Created DEFAULT GETDATE(),
     CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_CreatedBy DEFAULT SYSTEM_USER,
     Modified DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Modified DEFAULT GETDATE(),
-    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_ModifiedBy DEFAULT SYSTEM_USER
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_ModifiedBy DEFAULT SYSTEM_USER,
+
+    -- Foreign Key Constraint definition
+    CONSTRAINT FK_CompanyKeyPartner_CompanyGroup 
+        FOREIGN KEY (companygroupid) 
+        REFERENCES CompanyGroup(id)
 );
+
 
 -- IngestStatus Table
 CREATE TABLE IngestStatus (
@@ -76,7 +133,8 @@ CREATE TABLE IngestStatus (
     ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_IngestStatus_ModifiedBy DEFAULT SYSTEM_USER
 );
 
--- Staged Data Table (Physical Table Definition)
+-- Staged Data Table (Physical Table Definition);
+-- Some column names are FAKE 
 CREATE TABLE staged_data (
     id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_staged_data PRIMARY KEY,
     companyid INT NULL,
@@ -88,7 +146,7 @@ CREATE TABLE staged_data (
 );
 GO
 
--- 2. Triggers for Automatic Audit Column Updates
+-- 2. Triggers for Automatic Audit Column Updates; possibly a best practice, if we like that sort of thing.
 
 CREATE TRIGGER trg_CompanyGroup_UpdateModified
 ON CompanyGroup
@@ -332,18 +390,47 @@ GO
 -- sample data and demo script
 
 -- Clean up test records
+-- TRUNCATE TABLE Company;
+-- TRUNCATE TABLE FieldOffice;
+-- TRUNCATE TABLE CompanyKeyPartner;
+-- TRUNCATE TABLE CompanyGroup;
+-- TRUNCATE TABLE IngestStatus;
+
+
+-- Drop Foreign Key
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_CompanyKeyPartner_CompanyGroup')
+    ALTER TABLE CompanyKeyPartner DROP CONSTRAINT FK_CompanyKeyPartner_CompanyGroup;
+
+-- Truncate all tables
+TRUNCATE TABLE CompanyKeyPartner;
+TRUNCATE TABLE CompanyGroup;
 TRUNCATE TABLE Company;
 TRUNCATE TABLE FieldOffice;
-TRUNCATE TABLE CompanyGroup;
-TRUNCATE TABLE CompanyKeyPartner;
 TRUNCATE TABLE IngestStatus;
+
+-- Re-create Foreign Key
+ALTER TABLE CompanyKeyPartner
+ADD CONSTRAINT FK_CompanyKeyPartner_CompanyGroup
+FOREIGN KEY (companygroupid) 
+REFERENCES CompanyGroup(id);
+
 
 -- Seed reference data
 INSERT INTO Company (companyid, companyname) VALUES (101, 'Acme Corp'), (102, 'Globex Corp');
 INSERT INTO FieldOffice (fieldofficeid, fieldOfficeName) VALUES (500, 'North Region'), (501, 'South Region');
 
 -- Seed an existing row in CompanyGroup to trigger the duplicate rule test
+-- but this gives us a row in CompanyGroup with no matching row in CompanyKeyPartner
 INSERT INTO CompanyGroup (companyid, groupid, fieldofficeid) VALUES (101, 3, 500);
+INSERT INTO CompanyKeyPartner (companyid, fieldofficeid, fiscalyear, companygroupid)
+VALUES (
+    101,
+    500,
+    2026,
+    (SELECT id FROM CompanyGroup 
+    WHERE groupid = 3 AND companyid = 101 and fieldofficeid = 500)
+);
+
 
 -- Prepare staged input table variable containing test scenarios
 DECLARE @SampleStagedData StagedDataType;
@@ -372,5 +459,3 @@ SELECT
     -- CreatedBy
 FROM IngestStatus
 ORDER BY staged_data_id;
-
-
