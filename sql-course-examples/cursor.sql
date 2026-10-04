@@ -37,8 +37,3 @@ WHERE v.name LIKE '%delete%'
 OPEN My_Cursor
 
 FETCH NEXT FROM My_Cursor
-
-
-
-
-
