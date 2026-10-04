@@ -175,6 +175,10 @@ TRUNCATE TABLE removes the data by deallocating the data pages used to store the
 ---------------------------------
 -- Syntax
 
+USE SQL_Course
+GO
+
+
 DELETE FROM TableName
 
 DELETE FROM TableName WHERE Condition;
@@ -197,22 +201,25 @@ FROM [Covid].[Covid_Variant_Copy]
 SET STATISTICS TIME ON;
 
 DELETE FROM [Covid].[Covid_Variant_Copy]
--- 118 ms
+-- 118 ms; 97 ms
 
 /* Switch off statistics time */
 SET STATISTICS TIME OFF; 
 
 DROP TABLE [Covid].[Covid_Variant_Copy]
 
+SET STATISTICS TIME ON;
 DELETE FROM [Covid].[Covid_Variant_Copy]
-WHERE Num_Sequences_Total > 2
+WHERE Num_Sequences_Total > 2 --207 mv
+SET STATISTICS TIME OFF; 
+
 
 /* Switch on statistics time */
 SET STATISTICS TIME ON;
 
 TRUNCATE TABLE [Covid].[Covid_Variant_Copy]
 --  SQL Server Execution Times:
---   CPU time = 4 ms,  elapsed time = 6 ms.
+--   CPU time = 4 ms, 2ms,  elapsed time = 6 ms, 3 ms.
 
 /* Switch off statistics time */
-SET STATISTICS TIME OFF; 
+SET STATISTICS TIME OFF;   

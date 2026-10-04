@@ -769,8 +769,38 @@ FOR XML PATH ('Row'), ROOT('Root')
 
 --------------------------------------------------
 -- 8. Triggers syntax
+\*
+Types of trigger_events
+DML (Data manipulation language) events including INSERT, UPDATE and DELETE.
+DDL (Data definition language) events include CREATE, ALTER, DROP
+Logon triggers fire when a user logs on.
+
+Trigger points
+
+FOR Executed after successful completion of an event.
+AFTER (Can't be used on views) Executed after successful completion of an event.
+INSTEAD OF Executed before script.
+
+
+DML Logical Tables
+
+INSERTED Stores copies of new records for insert or update operations.
+DELETED Stores copies of previous values deleted or updated.
+
+Built in functions
+
+EVENTDATA() Returns transaction event details in XML format
+COLUMN_UPDATED() Returns columns that were effected by the INSERT or UPDATE statement.
+
+UPDATE() Accepts a column name and returns if a column was updated
+
+*/
 
 ------------------------
+
+--DML Triggers (insert, update, delete)
+-- to alter an existing trigger, change CREATE to ALTER
+
 CREATE TRIGGER TriggerNameInsert ON [TableName]
 AFTER INSERT 
 AS 
@@ -807,6 +837,8 @@ AS
 DROP TRIGGER TriggerName
 
 ------------------------
+-- DDL triggers
+
 CREATE TRIGGER [Tr_TriggerName]  
 ON DATABASE  
 FOR CREATE_TABLE, ALTER_TABLE, DROP_TABLE, CREATE_VIEW, ALTER_VIEW, DROP_VIEW  
