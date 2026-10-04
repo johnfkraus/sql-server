@@ -1,3 +1,5 @@
+old version with error table
+
 Using MS SQL Server 2022
 Create the following tables:
 a CompanyGroup table with the following columns:

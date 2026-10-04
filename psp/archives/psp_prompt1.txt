@@ -1,0 +1,1515 @@
+Using MS SQL Server 2022
+Create the following tables:
+a CompanyGroup table with the following columns:
+id, int, unique; companyid, int; groupid, int; fieldofficeid, int; Created, CreatedBy, Modified, ModifiedBy
+a CompanyKeyPartner table with the following columns:
+id, int, unique; companyid, int; fieldofficeid, int; companygroupid, int; fiscalyear, int; wtf1, int, null; wtf2, int, null; wtf3, int, null; Created, CreatedBy, Modified, ModifiedBy
+A staged_data table having the following columns:
+id, int, unique; companyid; fieldofficeid; companygroupid; fiscalyear, int; wtf1, int, null; wtf2, int, null; wtf3, int, null; 
+A Company table with columns: companyid, companyname
+Create an error table with columns: id, staged_data_id, error_message (varchar(1000)), Created, CreatedBy, Modified, ModifiedBy
+Tables with columns Created, CreatedBy, Modified, ModifiedBy should have default values from GETDATE() and SYSTEM_USER().
+
+I want a stored procedure.
+I want to pass the procedure the table named staged_data.
+The procedure should do the following for each row of the staged_data table:
+if any of companyid, fieldofficeid, or fiscalyear are null or empty string or 'not found' in the staged_data table, enter a row in the error table with a suitable
+message, the proceed to the next row.
+If the value in staged_data.companyid is not found in the Company.companyid column, enter an error message in the error table and skip to the next row, otherwise proceed.
+For any row in the CompanyGroup table, if staged_data.companyid = CompanyGroup.companyid AND staged_data.fieldofficeid = CompanyGroup.fieldofficeid 
+AND CompanyGroup.groupid = 3, make an entry in the error table and skip to the next row; otherwise proceed.
+The following two inserts should be treated as an atomic transaction.  If there is a failure, roll back, and make an entry in the error table.
+Enter a new row with a unique id in the CompanyGroup table.  Set CompanyGroup.companyid = staged_data.companyid, set CompanyGroup.groupid = 3, and
+set CompanyGroup.fieldofficeid = staged_data.fieldofficeid
+Enter a new row with a unique id in the CompanyKeyPartner table.  In the CompanyKeyPartner table, set companyid = staged_data.companyid, set groupid = 3, and
+set fieldofficeid = staged_data.fieldofficeid; set WTF1, WTF2, WTF3, and fiscalyear values to match those in the staged_data table.
+For each row processed from the staged_data table, print an informative message, including any applicable error message.
+
+
+
+Gemini
+New chat
+Search chats
+Daily brief
+Images
+Videos
+Library
+Labs
+New notebook
+SQL Server Staged Data Processing
+SQL Server Table Creation Script
+Understanding SQL Server Ledger Databases
+Viewing SQL Server Transaction Logs
+Git Add Dry Run Command
+SQL and Pandas Gaps and Islands
+Adding a Deleted Column in SQL Server
+Configuring SQL Server UK Dates
+Restoring SQL Server Backups in Docker
+Scheduling Jobs in SQL Server
+SQL Server Execution Plan in VS Code
+Clustered vs. Non-Clustered SQL Indexes
+"This is my song" was the theme for which movies?
+Case-Sensitive Sorting in SQL Server
+Understanding TOP (1000) in SQL Server
+Case-Insensitive Sorting in SQL Server
+Lifespan of SQL Server Global Temporary Tables
+Creating Restore Points in MS SQL Server
+"No Bands" Sign Description
+Cross-Database Relational Integrity in SQL Server
+Understanding Quality Gates in SQL Server
+Generating ERDs in SQL Server
+SQL Pagination and Sector Filtering
+Connecting to MS SQL Server in Docker on macOS
+SQL Server JSON Company Data Representation
+Uninstalling Pip Packages in Conda
+Conversation with Gemini
+Using MS SQL Server 2022
+
+Create the following tables:
+
+a CompanyGroup table with the following columns:
+
+id, int, unique; companyid, int; groupid, int; fieldofficeid, int; Created, CreatedBy, Modified, ModifiedBy
+
+a CompanyKeyPartner table with the following columns:
+
+id, int, unique; companyid, int; fieldofficeid, int; companygroupid, int; fiscalyear, int; wtf1, int, null; wtf2, int, null; wtf3, int, null; Created, CreatedBy, Modified, ModifiedBy
+
+A staged_data table having the following columns:
+
+id, int, unique; companyid; fieldofficeid; companygroupid; fiscalyear, int; wtf1, int, null; wtf2, int, null; wtf3, int, null; 
+
+A Company table with columns: companyid, companyname
+
+Create an error table with columns: id, staged_data_id, error_message (varchar(1000)), Created, CreatedBy, Modified, ModifiedBy
+
+Tables with columns Created, CreatedBy, Modified, ModifiedBy should have default values from GETDATE() and SYSTEM_USER().
+
+
+
+I want a stored procedure.
+
+I want to pass the procedure the table named staged_data.
+
+The procedure should do the following for each row of the staged_data table:
+
+if any of companyid, fieldofficeid, or fiscalyear are null or empty string or 'not found' in the staged_data table, enter a row in the error table with a suitable
+
+message, the proceed to the next row.
+
+If the value in staged_data.companyid is not found in the Company.companyid column, enter an error message in the error table and skip to the next row, otherwise proceed.
+
+For any row in the CompanyGroup table, if staged_data.companyid = CompanyGroup.companyid AND staged_data.fieldofficeid = CompanyGroup.fieldofficeid 
+
+AND CompanyGroup.groupid = 3, make an entry in the error table and skip to the next row; otherwise proceed.
+
+The following two inserts should be treated as an atomic transaction.  If there is a failure, roll back, and make an entry in the error table.
+
+Enter a new row with a unique id in the CompanyGroup table.  Set CompanyGroup.companyid = staged_data.companyid, set CompanyGroup.groupid = 3, and
+
+set CompanyGroup.fieldofficeid = staged_data.fieldofficeid
+
+Enter a new row with a unique id in the CompanyKeyPartner table.  In the CompanyKeyPartner table, set companyid = staged_data.companyid, set groupid = 3, and
+
+set fieldofficeid = staged_data.fieldofficeid; set WTF1, WTF2, WTF3, and fiscalyear values to match those in the staged_data table.
+
+For each row processed from the staged_data table, print an informative message, including any applicable error message.
+
+Here are the SQL scripts to create the required tables, a user-defined table type (necessary for passing a table variable into a stored procedure in SQL Server), and the stored procedure.
+
+1. Table Creation Scripts
+SQL
+-- Company Table
+CREATE TABLE Company (
+    companyid INT CONSTRAINT PK_Company PRIMARY KEY,
+    companyname VARCHAR(255) NOT NULL
+);
+
+-- CompanyGroup Table
+CREATE TABLE CompanyGroup (
+    id INT IDENTITY(1,1) CONSTRAINT PK_CompanyGroup PRIMARY KEY,
+    companyid INT NOT NULL,
+    groupid INT NOT NULL,
+    fieldofficeid INT NOT NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_CompanyGroup_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyGroup_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_CompanyGroup_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyGroup_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- CompanyKeyPartner Table
+CREATE TABLE CompanyKeyPartner (
+    id INT IDENTITY(1,1) CONSTRAINT PK_CompanyKeyPartner PRIMARY KEY,
+    companyid INT NOT NULL,
+    fieldofficeid INT NOT NULL,
+    companygroupid INT NOT NULL,
+    fiscalyear INT NOT NULL,
+    wtf1 INT NULL,
+    wtf2 INT NULL,
+    wtf3 INT NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- Error Table
+CREATE TABLE ErrorLog (
+    id INT IDENTITY(1,1) CONSTRAINT PK_ErrorLog PRIMARY KEY,
+    staged_data_id INT NULL,
+    error_message VARCHAR(1000) NOT NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_ErrorLog_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_ErrorLog_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_ErrorLog_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_ErrorLog_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- Staged Data Table (Physical Table)
+CREATE TABLE staged_data (
+    id INT IDENTITY(1,1) CONSTRAINT PK_staged_data PRIMARY KEY,
+    companyid VARCHAR(50) NULL,
+    fieldofficeid VARCHAR(50) NULL,
+    companygroupid INT NULL,
+    fiscalyear VARCHAR(50) NULL,
+    wtf1 INT NULL,
+    wtf2 INT NULL,
+    wtf3 INT NULL
+);
+2. Table Type Creation
+In SQL Server, to pass a table into a stored procedure as a parameter, you must use a User-Defined Table Type (UDTT).
+
+SQL
+CREATE TYPE StagedDataType AS TABLE (
+    id INT,
+    companyid VARCHAR(50),
+    fieldofficeid VARCHAR(50),
+    companygroupid INT,
+    fiscalyear VARCHAR(50),
+    wtf1 INT,
+    wtf2 INT,
+    wtf3 INT
+);
+3. Stored Procedure
+This stored procedure iterates through the passed table parameter row-by-row using a cursor, validates the constraints, performs the atomic transaction, and logs errors/messages accordingly.
+
+SQL
+CREATE OR ALTER PROCEDURE sp_ProcessStagedData
+    @staged_data StagedDataType READONLY
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Variables to hold current row data
+    DECLARE @id INT,
+            @companyid_str VARCHAR(50),
+            @fieldofficeid_str VARCHAR(50),
+            @fiscalyear_str VARCHAR(50),
+            @companygroupid INT,
+            @wtf1 INT,
+            @wtf2 INT,
+            @wtf3 INT;
+
+    -- Parsed integer values
+    DECLARE @companyid INT,
+            @fieldofficeid INT,
+            @fiscalyear INT;
+
+    -- Helper variables
+    DECLARE @error_msg VARCHAR(1000);
+    DECLARE @new_companygroupid INT;
+
+    -- Cursor to iterate through each row in staged_data
+    DECLARE stage_cursor CURSOR LOCAL FAST_FORWARD FOR
+    SELECT id, companyid, fieldofficeid, companygroupid, fiscalyear, wtf1, wtf2, wtf3
+    FROM @staged_data;
+
+    OPEN stage_cursor;
+
+    FETCH NEXT FROM stage_cursor INTO 
+        @id, @companyid_str, @fieldofficeid_str, @companygroupid, @fiscalyear_str, @wtf1, @wtf2, @wtf3;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @error_msg = NULL;
+
+        ------------------------------------------------------------------
+        -- 1. Validate required fields (NULL, empty string, or 'not found')
+        ------------------------------------------------------------------
+        IF @companyid_str IS NULL OR LTRIM(RTRIM(@companyid_str)) IN ('', 'not found')
+           OR @fieldofficeid_str IS NULL OR LTRIM(RTRIM(@fieldofficeid_str)) IN ('', 'not found')
+           OR @fiscalyear_str IS NULL OR LTRIM(RTRIM(@fiscalyear_str)) IN ('', 'not found')
+        BEGIN
+            SET @error_msg = 'Validation Failed: companyid, fieldofficeid, or fiscalyear is NULL, empty, or ''not found''.';
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': ' + @error_msg;
+            GOTO NextRow;
+        END
+
+        -- Cast/Parse strings to integer
+        SET @companyid = TRY_CAST(@companyid_str AS INT);
+        SET @fieldofficeid = TRY_CAST(@fieldofficeid_str AS INT);
+        SET @fiscalyear = TRY_CAST(@fiscalyear_str AS INT);
+
+        IF @companyid IS NULL OR @fieldofficeid IS NULL OR @fiscalyear IS NULL
+        BEGIN
+            SET @error_msg = 'Validation Failed: companyid, fieldofficeid, or fiscalyear cannot be converted to INT.';
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': ' + @error_msg;
+            GOTO NextRow;
+        END
+
+        ------------------------------------------------------------------
+        -- 2. Validate existence in Company table
+        ------------------------------------------------------------------
+        IF NOT EXISTS (SELECT 1 FROM Company WHERE companyid = @companyid)
+        BEGIN
+            SET @error_msg = 'Validation Failed: companyid ' + CAST(@companyid AS VARCHAR(10)) + ' not found in Company table.';
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': ' + @error_msg;
+            GOTO NextRow;
+        END
+
+        ------------------------------------------------------------------
+        -- 3. Check existing CompanyGroup match with groupid = 3
+        ------------------------------------------------------------------
+        IF EXISTS (
+            SELECT 1 
+            FROM CompanyGroup 
+            WHERE companyid = @companyid 
+              AND fieldofficeid = @fieldofficeid 
+              AND groupid = 3
+        )
+        BEGIN
+            SET @error_msg = 'Validation Failed: Entry already exists in CompanyGroup for companyid ' 
+                             + CAST(@companyid AS VARCHAR(10)) + ', fieldofficeid ' 
+                             + CAST(@fieldofficeid AS VARCHAR(10)) + ' with groupid = 3.';
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': ' + @error_msg;
+            GOTO NextRow;
+        END
+
+        ------------------------------------------------------------------
+        -- 4. Atomic Transaction Insert into CompanyGroup & CompanyKeyPartner
+        ------------------------------------------------------------------
+        BEGIN TRANSACTION;
+        BEGIN TRY
+            -- Insert into CompanyGroup
+            INSERT INTO CompanyGroup (companyid, groupid, fieldofficeid)
+            VALUES (@companyid, 3, @fieldofficeid);
+
+            SET @new_companygroupid = SCOPE_IDENTITY();
+
+            -- Insert into CompanyKeyPartner
+            INSERT INTO CompanyKeyPartner (companyid, fieldofficeid, companygroupid, fiscalyear, wtf1, wtf2, wtf3)
+            VALUES (@companyid, @fieldofficeid, @new_companygroupid, @fiscalyear, @wtf1, @wtf2, @wtf3);
+
+            COMMIT TRANSACTION;
+
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': Successfully processed and inserted into CompanyGroup (ID: ' 
+                  + CAST(@new_companygroupid AS VARCHAR(10)) + ') and CompanyKeyPartner.';
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+
+            SET @error_msg = 'Transaction Failed: ' + ERROR_MESSAGE();
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': ' + @error_msg;
+        END CATCH
+
+        NextRow:
+        FETCH NEXT FROM stage_cursor INTO 
+            @id, @companyid_str, @fieldofficeid_str, @companygroupid, @fiscalyear_str, @wtf1, @wtf2, @wtf3;
+    END
+
+    CLOSE stage_cursor;
+    DEALLOCATE stage_cursor;
+END;
+Example Usage
+SQL
+-- Populating sample company data
+INSERT INTO Company (companyid, companyname) VALUES (101, 'Acme Corp'), (102, 'Globex Corp');
+
+-- Declare and populate table variable
+DECLARE @MyStagedData StagedDataType;
+
+INSERT INTO @MyStagedData (id, companyid, fieldofficeid, companygroupid, fiscalyear, wtf1, wtf2, wtf3)
+VALUES 
+    (1, '101', '10', NULL, '2024', 10, 20, 30),        -- Valid row
+    (2, 'not found', '10', NULL, '2024', 5, 5, 5),      -- Invalid: 'not found'
+    (3, '999', '10', NULL, '2024', 1, 2, 3),            -- Invalid: company 999 missing
+    (4, '101', '10', NULL, '2024', 10, 20, 30);         -- Invalid: duplicate groupid=3 match
+
+-- Execute stored procedure
+EXEC sp_ProcessStagedData @staged_data = @MyStagedData;
+
+-- View logged errors
+SELECT * FROM ErrorLog;
+
+
+
+Gemini is AI and can make mistakes.
+
+
+
+
+
+
+
+
+
+
+
+Using MS SQL Server 2022: 
+
+Create the following tables:
+
+a CompanyGroup table with the following columns:
+id, int, NOT NULL unique; companyid, int; groupid, int; fieldofficeid, int; Created, CreatedBy, Modified, ModifiedBy
+
+a CompanyKeyPartner table with the following columns:
+id int NOT NULL unique; companyid, int; fieldofficeid, int; companygroupid, int; fiscalyear, int; wtf1, int, null; wtf2, int, null; wtf3, int, null; Created, CreatedBy, Modified, ModifiedBy
+
+A staged_data table having the following columns:
+id, int, unique; companyid int; fieldofficeid int; fiscalyear int; wtf1 int null; wtf2 int null; wtf3 int null;
+
+A Company table with columns: companyid int NOT NULL; and companyname varchar(30).
+
+A FieldOffice table with columns: fieldofficeid int NOT NULL; fieldOfficeName varchar(30).
+
+Create an IngestStatus table with columns: id int; staged_data_id int; company_group_id int; company_key_partner.id; error bit default 0; and status_message (varchar(2000));  Created date;  CreatedBy varchar; Modified date; and ModifiedBy varchar.
+
+Tables with columns Created, CreatedBy, Modified, ModifiedBy should have default values from GETDATE() and SYSTEM_USER().
+
+Include a trigger to ensure that Modified and ModifiedBy fields are automatically updated.
+
+I want a stored procedure to which I can pass the table named staged_data.
+
+The procedure should do the following for each row of the staged_data table:
+
+For every row of the staged_data table being processed (the “status row”), create a row in the IngestStatus table and set IngestStatus.staged_data_id = staged_data.id.
+
+If any of staged_data.companyid, staged_data.fieldofficeid, or staged_data.fiscalyear are null, empty string, 'not found', or containing data not of the correct type (all should be ints) then in the status row set the IngestStatus.staged_data_id = staged_data.id; set IngestStatus.error = 1; set IngestStatus.status_message equal to a message indicating that an error occurred, which field or fields in the ingest_data row caused the error; then proceed to the next row.
+
+If the value in staged_data.companyid is not found in the Company.companyid column, enter a a message in IngestStatus.status_message reporting the error and include which companyid that could not be found; set IngestStatus.error=1 and skip to the next row, otherwise proceed.
+
+If the value in staged_data.fieldofficeid is not found in the FieldOffice.fieldofficeid column, enter a message in IngestStatus.status_message reporting the error and include which field office id could not be found; set IngestStatus.error=1 and skip to the next row, otherwise proceed.
+
+For any row in the CompanyGroup table, if staged_data.companyid = CompanyGroup.companyid AND staged_data.fieldofficeid = CompanyGroup.fieldofficeid
+AND CompanyGroup.groupid = 3, make an entry in the IngestStatus.status_message field indicating an error, that a duplicate record already existed in the CompanyGroup table with the values of companyid and fieldofficeid; skip to the next row of staged_data; otherwise proceed.
+
+The following two inserts should be treated as an atomic transaction. If there is a failure, roll back, and make an entry in the IngestStatus indicating an error. The error message should describe the error.  reference the row number of the staged_data table that failed to be processed.
+Enter a new row with a unique id in the CompanyGroup table. Generate a unique id for each row. Set CompanyGroup.companyid = staged_data.companyid, set CompanyGroup.groupid = 3, and set CompanyGroup.fieldofficeid = staged_data.fieldofficeid
+Enter a new row with a unique id in the CompanyKeyPartner table. In the CompanyKeyPartner table, set companyid = staged_data.companyid, set groupid = 3, and
+set fieldofficeid = staged_data.fieldofficeid; set WTF1, WTF2, WTF3, and fiscalyear values to match those in the staged_data table. Set CompanyKeyPartner.companygroupid = CompanyGroup.id.
+
+For each row of staged_data successfully processed create a success message and enter it into IngestStatus.status_message; set IngestStatus.company_group_id = CompanyGroup.companygroupid (from the row just created in the CompanyGroup table); set IngestStatus.key_partner_id = CompanyKeyPartner.key_partner_id (from the row just created in the CompanyKeyPartner table).  The value of IngestStatus.error will remain 0.
+
+If any row of the staged_data causes an error not specifically described here, that result should also be reported in a row of the IngestStatus table.
+
+Generate some sample data and SQL that demonstrated the functionality.
+
+
+
+
+Gemini
+New chat
+Search chats
+Daily brief
+Images
+Videos
+Library
+Labs
+New notebook
+SQL Server Staged Data Processing
+SQL Server Table Creation Script
+Understanding SQL Server Ledger Databases
+Viewing SQL Server Transaction Logs
+Git Add Dry Run Command
+SQL and Pandas Gaps and Islands
+Adding a Deleted Column in SQL Server
+Configuring SQL Server UK Dates
+Restoring SQL Server Backups in Docker
+Scheduling Jobs in SQL Server
+SQL Server Execution Plan in VS Code
+Clustered vs. Non-Clustered SQL Indexes
+"This is my song" was the theme for which movies?
+Case-Sensitive Sorting in SQL Server
+Understanding TOP (1000) in SQL Server
+Case-Insensitive Sorting in SQL Server
+Lifespan of SQL Server Global Temporary Tables
+Creating Restore Points in MS SQL Server
+"No Bands" Sign Description
+Cross-Database Relational Integrity in SQL Server
+Understanding Quality Gates in SQL Server
+Generating ERDs in SQL Server
+SQL Pagination and Sector Filtering
+Connecting to MS SQL Server in Docker on macOS
+SQL Server JSON Company Data Representation
+Uninstalling Pip Packages in Conda
+Conversation with Gemini
+Using MS SQL Server 2022
+
+Create the following tables:
+
+a CompanyGroup table with the following columns:
+
+id, int, unique; companyid, int; groupid, int; fieldofficeid, int; Created, CreatedBy, Modified, ModifiedBy
+
+a CompanyKeyPartner table with the following columns:
+
+id, int, unique; companyid, int; fieldofficeid, int; companygroupid, int; fiscalyear, int; wtf1, int, null; wtf2, int, null; wtf3, int, null; Created, CreatedBy, Modified, ModifiedBy
+
+A staged_data table having the following columns:
+
+id, int, unique; companyid; fieldofficeid; companygroupid; fiscalyear, int; wtf1, int, null; wtf2, int, null; wtf3, int, null; 
+
+A Company table with columns: companyid, companyname
+
+Create an error table with columns: id, staged_data_id, error_message (varchar(1000)), Created, CreatedBy, Modified, ModifiedBy
+
+Tables with columns Created, CreatedBy, Modified, ModifiedBy should have default values from GETDATE() and SYSTEM_USER().
+
+
+
+I want a stored procedure.
+
+I want to pass the procedure the table named staged_data.
+
+The procedure should do the following for each row of the staged_data table:
+
+if any of companyid, fieldofficeid, or fiscalyear are null or empty string or 'not found' in the staged_data table, enter a row in the error table with a suitable
+
+message, the proceed to the next row.
+
+If the value in staged_data.companyid is not found in the Company.companyid column, enter an error message in the error table and skip to the next row, otherwise proceed.
+
+For any row in the CompanyGroup table, if staged_data.companyid = CompanyGroup.companyid AND staged_data.fieldofficeid = CompanyGroup.fieldofficeid 
+
+AND CompanyGroup.groupid = 3, make an entry in the error table and skip to the next row; otherwise proceed.
+
+The following two inserts should be treated as an atomic transaction.  If there is a failure, roll back, and make an entry in the error table.
+
+Enter a new row with a unique id in the CompanyGroup table.  Set CompanyGroup.companyid = staged_data.companyid, set CompanyGroup.groupid = 3, and
+
+set CompanyGroup.fieldofficeid = staged_data.fieldofficeid
+
+Enter a new row with a unique id in the CompanyKeyPartner table.  In the CompanyKeyPartner table, set companyid = staged_data.companyid, set groupid = 3, and
+
+set fieldofficeid = staged_data.fieldofficeid; set WTF1, WTF2, WTF3, and fiscalyear values to match those in the staged_data table.
+
+For each row processed from the staged_data table, print an informative message, including any applicable error message.
+
+Here are the SQL scripts to create the required tables, a user-defined table type (necessary for passing a table variable into a stored procedure in SQL Server), and the stored procedure.
+
+1. Table Creation Scripts
+SQL
+-- Company Table
+CREATE TABLE Company (
+    companyid INT CONSTRAINT PK_Company PRIMARY KEY,
+    companyname VARCHAR(255) NOT NULL
+);
+
+-- CompanyGroup Table
+CREATE TABLE CompanyGroup (
+    id INT IDENTITY(1,1) CONSTRAINT PK_CompanyGroup PRIMARY KEY,
+    companyid INT NOT NULL,
+    groupid INT NOT NULL,
+    fieldofficeid INT NOT NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_CompanyGroup_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyGroup_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_CompanyGroup_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyGroup_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- CompanyKeyPartner Table
+CREATE TABLE CompanyKeyPartner (
+    id INT IDENTITY(1,1) CONSTRAINT PK_CompanyKeyPartner PRIMARY KEY,
+    companyid INT NOT NULL,
+    fieldofficeid INT NOT NULL,
+    companygroupid INT NOT NULL,
+    fiscalyear INT NOT NULL,
+    wtf1 INT NULL,
+    wtf2 INT NULL,
+    wtf3 INT NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- Error Table
+CREATE TABLE ErrorLog (
+    id INT IDENTITY(1,1) CONSTRAINT PK_ErrorLog PRIMARY KEY,
+    staged_data_id INT NULL,
+    error_message VARCHAR(1000) NOT NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_ErrorLog_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_ErrorLog_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_ErrorLog_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_ErrorLog_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- Staged Data Table (Physical Table)
+CREATE TABLE staged_data (
+    id INT IDENTITY(1,1) CONSTRAINT PK_staged_data PRIMARY KEY,
+    companyid VARCHAR(50) NULL,
+    fieldofficeid VARCHAR(50) NULL,
+    companygroupid INT NULL,
+    fiscalyear VARCHAR(50) NULL,
+    wtf1 INT NULL,
+    wtf2 INT NULL,
+    wtf3 INT NULL
+);
+2. Table Type Creation
+In SQL Server, to pass a table into a stored procedure as a parameter, you must use a User-Defined Table Type (UDTT).
+
+SQL
+CREATE TYPE StagedDataType AS TABLE (
+    id INT,
+    companyid VARCHAR(50),
+    fieldofficeid VARCHAR(50),
+    companygroupid INT,
+    fiscalyear VARCHAR(50),
+    wtf1 INT,
+    wtf2 INT,
+    wtf3 INT
+);
+3. Stored Procedure
+This stored procedure iterates through the passed table parameter row-by-row using a cursor, validates the constraints, performs the atomic transaction, and logs errors/messages accordingly.
+
+SQL
+CREATE OR ALTER PROCEDURE sp_ProcessStagedData
+    @staged_data StagedDataType READONLY
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Variables to hold current row data
+    DECLARE @id INT,
+            @companyid_str VARCHAR(50),
+            @fieldofficeid_str VARCHAR(50),
+            @fiscalyear_str VARCHAR(50),
+            @companygroupid INT,
+            @wtf1 INT,
+            @wtf2 INT,
+            @wtf3 INT;
+
+    -- Parsed integer values
+    DECLARE @companyid INT,
+            @fieldofficeid INT,
+            @fiscalyear INT;
+
+    -- Helper variables
+    DECLARE @error_msg VARCHAR(1000);
+    DECLARE @new_companygroupid INT;
+
+    -- Cursor to iterate through each row in staged_data
+    DECLARE stage_cursor CURSOR LOCAL FAST_FORWARD FOR
+    SELECT id, companyid, fieldofficeid, companygroupid, fiscalyear, wtf1, wtf2, wtf3
+    FROM @staged_data;
+
+    OPEN stage_cursor;
+
+    FETCH NEXT FROM stage_cursor INTO 
+        @id, @companyid_str, @fieldofficeid_str, @companygroupid, @fiscalyear_str, @wtf1, @wtf2, @wtf3;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @error_msg = NULL;
+
+        ------------------------------------------------------------------
+        -- 1. Validate required fields (NULL, empty string, or 'not found')
+        ------------------------------------------------------------------
+        IF @companyid_str IS NULL OR LTRIM(RTRIM(@companyid_str)) IN ('', 'not found')
+           OR @fieldofficeid_str IS NULL OR LTRIM(RTRIM(@fieldofficeid_str)) IN ('', 'not found')
+           OR @fiscalyear_str IS NULL OR LTRIM(RTRIM(@fiscalyear_str)) IN ('', 'not found')
+        BEGIN
+            SET @error_msg = 'Validation Failed: companyid, fieldofficeid, or fiscalyear is NULL, empty, or ''not found''.';
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': ' + @error_msg;
+            GOTO NextRow;
+        END
+
+        -- Cast/Parse strings to integer
+        SET @companyid = TRY_CAST(@companyid_str AS INT);
+        SET @fieldofficeid = TRY_CAST(@fieldofficeid_str AS INT);
+        SET @fiscalyear = TRY_CAST(@fiscalyear_str AS INT);
+
+        IF @companyid IS NULL OR @fieldofficeid IS NULL OR @fiscalyear IS NULL
+        BEGIN
+            SET @error_msg = 'Validation Failed: companyid, fieldofficeid, or fiscalyear cannot be converted to INT.';
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': ' + @error_msg;
+            GOTO NextRow;
+        END
+
+        ------------------------------------------------------------------
+        -- 2. Validate existence in Company table
+        ------------------------------------------------------------------
+        IF NOT EXISTS (SELECT 1 FROM Company WHERE companyid = @companyid)
+        BEGIN
+            SET @error_msg = 'Validation Failed: companyid ' + CAST(@companyid AS VARCHAR(10)) + ' not found in Company table.';
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': ' + @error_msg;
+            GOTO NextRow;
+        END
+
+        ------------------------------------------------------------------
+        -- 3. Check existing CompanyGroup match with groupid = 3
+        ------------------------------------------------------------------
+        IF EXISTS (
+            SELECT 1 
+            FROM CompanyGroup 
+            WHERE companyid = @companyid 
+              AND fieldofficeid = @fieldofficeid 
+              AND groupid = 3
+        )
+        BEGIN
+            SET @error_msg = 'Validation Failed: Entry already exists in CompanyGroup for companyid ' 
+                             + CAST(@companyid AS VARCHAR(10)) + ', fieldofficeid ' 
+                             + CAST(@fieldofficeid AS VARCHAR(10)) + ' with groupid = 3.';
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': ' + @error_msg;
+            GOTO NextRow;
+        END
+
+        ------------------------------------------------------------------
+        -- 4. Atomic Transaction Insert into CompanyGroup & CompanyKeyPartner
+        ------------------------------------------------------------------
+        BEGIN TRANSACTION;
+        BEGIN TRY
+            -- Insert into CompanyGroup
+            INSERT INTO CompanyGroup (companyid, groupid, fieldofficeid)
+            VALUES (@companyid, 3, @fieldofficeid);
+
+            SET @new_companygroupid = SCOPE_IDENTITY();
+
+            -- Insert into CompanyKeyPartner
+            INSERT INTO CompanyKeyPartner (companyid, fieldofficeid, companygroupid, fiscalyear, wtf1, wtf2, wtf3)
+            VALUES (@companyid, @fieldofficeid, @new_companygroupid, @fiscalyear, @wtf1, @wtf2, @wtf3);
+
+            COMMIT TRANSACTION;
+
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': Successfully processed and inserted into CompanyGroup (ID: ' 
+                  + CAST(@new_companygroupid AS VARCHAR(10)) + ') and CompanyKeyPartner.';
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+
+            SET @error_msg = 'Transaction Failed: ' + ERROR_MESSAGE();
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT 'Row ID ' + CAST(@id AS VARCHAR(10)) + ': ' + @error_msg;
+        END CATCH
+
+        NextRow:
+        FETCH NEXT FROM stage_cursor INTO 
+            @id, @companyid_str, @fieldofficeid_str, @companygroupid, @fiscalyear_str, @wtf1, @wtf2, @wtf3;
+    END
+
+    CLOSE stage_cursor;
+    DEALLOCATE stage_cursor;
+END;
+Example Usage
+SQL
+-- Populating sample company data
+INSERT INTO Company (companyid, companyname) VALUES (101, 'Acme Corp'), (102, 'Globex Corp');
+
+-- Declare and populate table variable
+DECLARE @MyStagedData StagedDataType;
+
+INSERT INTO @MyStagedData (id, companyid, fieldofficeid, companygroupid, fiscalyear, wtf1, wtf2, wtf3)
+VALUES 
+    (1, '101', '10', NULL, '2024', 10, 20, 30),        -- Valid row
+    (2, 'not found', '10', NULL, '2024', 5, 5, 5),      -- Invalid: 'not found'
+    (3, '999', '10', NULL, '2024', 1, 2, 3),            -- Invalid: company 999 missing
+    (4, '101', '10', NULL, '2024', 10, 20, 30);         -- Invalid: duplicate groupid=3 match
+
+-- Execute stored procedure
+EXEC sp_ProcessStagedData @staged_data = @MyStagedData;
+
+-- View logged errors
+SELECT * FROM ErrorLog;
+Using MS SQL Server 2022
+
+Create the following tables:
+
+a CompanyGroup table with the following columns:
+
+id, int, unique; companyid, int; groupid, int; fieldofficeid, int; Created, CreatedBy, Modified, ModifiedBy
+
+a CompanyKeyPartner table with the following columns:
+
+id, int, unique; companyid, int; fieldofficeid, int; companygroupid, int; fiscalyear, int; wtf1, int, null; wtf2, int, null; wtf3, int, null; Created, CreatedBy, Modified, ModifiedBy
+
+A staged_data table having the following columns:
+
+id, int, unique; companyid; fieldofficeid; fiscalyear, int; wtf1, int, null; wtf2, int, null; wtf3, int, null;
+
+A Company table with columns: companyid, companyname
+
+Create an error table with columns: id, staged_data_id, error_message (varchar(1000)), Created, CreatedBy, Modified, ModifiedBy
+
+Tables with columns Created, CreatedBy, Modified, ModifiedBy should have default values from GETDATE() and SYSTEM_USER().
+
+Include a trigger to ensure that Modified and ModifiedBy fields are automatically updates.
+
+
+
+I want a stored procedure.
+
+I want to pass the procedure the table named staged_data.
+
+The procedure should do the following for each row of the staged_data table:
+
+if any of companyid, fieldofficeid, or fiscalyear are null or empty string or 'not found' in the staged_data table, enter a row in the error table with a suitable
+
+message, the proceed to the next row.
+
+If the value in staged_data.companyid is not found in the Company.companyid column, enter an error message in the error table and skip to the next row, otherwise proceed.
+
+For any row in the CompanyGroup table, if staged_data.companyid = CompanyGroup.companyid AND staged_data.fieldofficeid = CompanyGroup.fieldofficeid
+
+AND CompanyGroup.groupid = 3, make an entry in the error table and skip to the next row; otherwise proceed.
+
+The following two inserts should be treated as an atomic transaction. If there is a failure, roll back, and make an entry in the error table. The error message should reference the row number of the staged_data table that failed to be processed.
+
+Enter a new row with a unique id in the CompanyGroup table. Generate a unique id for each row. Set CompanyGroup.companyid = staged_data.companyid, set CompanyGroup.groupid = 3, and set CompanyGroup.fieldofficeid = staged_data.fieldofficeid
+
+Enter a new row with a unique id in the CompanyKeyPartner table. In the CompanyKeyPartner table, set companyid = staged_data.companyid, set groupid = 3, and
+
+set fieldofficeid = staged_data.fieldofficeid; set WTF1, WTF2, WTF3, and fiscalyear values to match those in the staged_data table. Set CompanyKeyPartner.companygroupid = CompanyGroup.id.
+
+For each row processed from the staged_data table, print an informative message, including any applicable error message.
+
+Here is the SQL Server 2022 implementation containing table definitions, audit triggers, a user-defined table type for passing the staged data parameter, and the stored procedure.
+
+1. Table Definitions
+SQL
+-- Company Table
+CREATE TABLE Company (
+    companyid INT CONSTRAINT PK_Company PRIMARY KEY,
+    companyname VARCHAR(255) NOT NULL
+);
+
+-- CompanyGroup Table
+CREATE TABLE CompanyGroup (
+    id INT IDENTITY(1,1) CONSTRAINT PK_CompanyGroup PRIMARY KEY,
+    companyid INT NOT NULL,
+    groupid INT NOT NULL,
+    fieldofficeid INT NOT NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_CompanyGroup_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyGroup_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_CompanyGroup_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyGroup_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- CompanyKeyPartner Table
+CREATE TABLE CompanyKeyPartner (
+    id INT IDENTITY(1,1) CONSTRAINT PK_CompanyKeyPartner PRIMARY KEY,
+    companyid INT NOT NULL,
+    fieldofficeid INT NOT NULL,
+    companygroupid INT NOT NULL,
+    fiscalyear INT NOT NULL,
+    wtf1 INT NULL,
+    wtf2 INT NULL,
+    wtf3 INT NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- Error Table
+CREATE TABLE ErrorLog (
+    id INT IDENTITY(1,1) CONSTRAINT PK_ErrorLog PRIMARY KEY,
+    staged_data_id INT NULL,
+    error_message VARCHAR(1000) NOT NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_ErrorLog_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_ErrorLog_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_ErrorLog_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_ErrorLog_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- Staged Data Table (Physical Table)
+CREATE TABLE staged_data (
+    id INT IDENTITY(1,1) CONSTRAINT PK_staged_data PRIMARY KEY,
+    companyid VARCHAR(50) NULL,
+    fieldofficeid VARCHAR(50) NULL,
+    fiscalyear VARCHAR(50) NULL,
+    wtf1 INT NULL,
+    wtf2 INT NULL,
+    wtf3 INT NULL
+);
+2. Triggers for Automatic Audit Column Updates
+These triggers automatically update the Modified and ModifiedBy fields whenever a row is updated in any of the audited tables.
+
+SQL
+CREATE TRIGGER trg_CompanyGroup_UpdateModified
+ON CompanyGroup
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE cg
+    SET Modified = GETDATE(),
+        ModifiedBy = SYSTEM_USER
+    FROM CompanyGroup cg
+    INNER JOIN inserted i ON cg.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_CompanyKeyPartner_UpdateModified
+ON CompanyKeyPartner
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE ckp
+    SET Modified = GETDATE(),
+        ModifiedBy = SYSTEM_USER
+    FROM CompanyKeyPartner ckp
+    INNER JOIN inserted i ON ckp.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_ErrorLog_UpdateModified
+ON ErrorLog
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE el
+    SET Modified = GETDATE(),
+        ModifiedBy = SYSTEM_USER
+    FROM ErrorLog el
+    INNER JOIN inserted i ON el.id = i.id;
+END;
+GO
+3. User-Defined Table Type
+In MS SQL Server, passing tabular data directly into a stored procedure parameter requires a User-Defined Table Type (UDTT).
+
+SQL
+CREATE TYPE StagedDataType AS TABLE (
+    id INT,
+    companyid VARCHAR(50),
+    fieldofficeid VARCHAR(50),
+    fiscalyear VARCHAR(50),
+    wtf1 INT,
+    wtf2 INT,
+    wtf3 INT
+);
+GO
+4. Stored Procedure
+The procedure uses a row-by-row cursor over the passed @staged_data variable, validating each constraint, capturing the generated CompanyGroup.id, linking it to CompanyKeyPartner.companygroupid, and logging errors with row references.
+
+SQL
+CREATE OR ALTER PROCEDURE sp_ProcessStagedData
+    @staged_data StagedDataType READONLY
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Local row variables
+    DECLARE @id INT,
+            @companyid_raw VARCHAR(50),
+            @fieldofficeid_raw VARCHAR(50),
+            @fiscalyear_raw VARCHAR(50),
+            @wtf1 INT,
+            @wtf2 INT,
+            @wtf3 INT;
+
+    -- Parsed integer values
+    DECLARE @companyid INT,
+            @fieldofficeid INT,
+            @fiscalyear INT;
+
+    -- Execution context variables
+    DECLARE @error_msg VARCHAR(1000);
+    DECLARE @new_companygroup_id INT;
+
+    -- Cursor to iterate through staged data
+    DECLARE stage_cursor CURSOR LOCAL FAST_FORWARD FOR
+    SELECT id, companyid, fieldofficeid, fiscalyear, wtf1, wtf2, wtf3
+    FROM @staged_data;
+
+    OPEN stage_cursor;
+
+    FETCH NEXT FROM stage_cursor INTO 
+        @id, @companyid_raw, @fieldofficeid_raw, @fiscalyear_raw, @wtf1, @wtf2, @wtf3;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @error_msg = NULL;
+
+        ------------------------------------------------------------------
+        -- Rule 1: Validate Required Fields (NULL, Empty, 'not found')
+        ------------------------------------------------------------------
+        IF @companyid_raw IS NULL OR LTRIM(RTRIM(LOWER(@companyid_raw))) IN ('', 'not found')
+           OR @fieldofficeid_raw IS NULL OR LTRIM(RTRIM(LOWER(@fieldofficeid_raw))) IN ('', 'not found')
+           OR @fiscalyear_raw IS NULL OR LTRIM(RTRIM(LOWER(@fiscalyear_raw))) IN ('', 'not found')
+        BEGIN
+            SET @error_msg = CONCAT('Row ID ', @id, ' failed validation: companyid, fieldofficeid, or fiscalyear is NULL, empty, or ''not found''.');
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT @error_msg;
+            GOTO NextRow;
+        END
+
+        -- Safely cast strings to integer
+        SET @companyid = TRY_CAST(@companyid_raw AS INT);
+        SET @fieldofficeid = TRY_CAST(@fieldofficeid_raw AS INT);
+        SET @fiscalyear = TRY_CAST(@fiscalyear_raw AS INT);
+
+        IF @companyid IS NULL OR @fieldofficeid IS NULL OR @fiscalyear IS NULL
+        BEGIN
+            SET @error_msg = CONCAT('Row ID ', @id, ' failed validation: companyid, fieldofficeid, or fiscalyear could not be converted to integer values.');
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT @error_msg;
+            GOTO NextRow;
+        END
+
+        ------------------------------------------------------------------
+        -- Rule 2: Check existence in Company table
+        ------------------------------------------------------------------
+        IF NOT EXISTS (SELECT 1 FROM Company WHERE companyid = @companyid)
+        BEGIN
+            SET @error_msg = CONCAT('Row ID ', @id, ' failed validation: companyid (', @companyid, ') was not found in Company table.');
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT @error_msg;
+            GOTO NextRow;
+        END
+
+        ------------------------------------------------------------------
+        -- Rule 3: Check for existing CompanyGroup match with groupid = 3
+        ------------------------------------------------------------------
+        IF EXISTS (
+            SELECT 1 
+            FROM CompanyGroup 
+            WHERE companyid = @companyid 
+              AND fieldofficeid = @fieldofficeid 
+              AND groupid = 3
+        )
+        BEGIN
+            SET @error_msg = CONCAT('Row ID ', @id, ' failed validation: Existing record found in CompanyGroup with companyid=', @companyid, ', fieldofficeid=', @fieldofficeid, ', and groupid=3.');
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT @error_msg;
+            GOTO NextRow;
+        END
+
+        ------------------------------------------------------------------
+        -- Rule 4: Atomic Insert Transaction
+        ------------------------------------------------------------------
+        BEGIN TRANSACTION;
+        BEGIN TRY
+            -- Insert into CompanyGroup
+            INSERT INTO CompanyGroup (companyid, groupid, fieldofficeid)
+            VALUES (@companyid, 3, @fieldofficeid);
+
+            -- Capture generated unique ID for CompanyGroup
+            SET @new_companygroup_id = SCOPE_IDENTITY();
+
+            -- Insert into CompanyKeyPartner linked via companygroupid
+            INSERT INTO CompanyKeyPartner (companyid, fieldofficeid, companygroupid, fiscalyear, wtf1, wtf2, wtf3)
+            VALUES (@companyid, @fieldofficeid, @new_companygroup_id, @fiscalyear, @wtf1, @wtf2, @wtf3);
+
+            COMMIT TRANSACTION;
+
+            PRINT CONCAT('Row ID ', @id, ' processed successfully. Created CompanyGroup ID: ', @new_companygroup_id, ' and linked CompanyKeyPartner record.');
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+
+            SET @error_msg = CONCAT('Row ID ', @id, ' failed during insert transaction: ', ERROR_MESSAGE());
+            INSERT INTO ErrorLog (staged_data_id, error_message) VALUES (@id, @error_msg);
+            PRINT @error_msg;
+        END CATCH
+
+        NextRow:
+        FETCH NEXT FROM stage_cursor INTO 
+            @id, @companyid_raw, @fieldofficeid_raw, @fiscalyear_raw, @wtf1, @wtf2, @wtf3;
+    END
+
+    CLOSE stage_cursor;
+    DEALLOCATE stage_cursor;
+END;
+GO
+Example Execution
+SQL
+-- 1. Setup reference data
+INSERT INTO Company (companyid, companyname) 
+VALUES (1001, 'Acme Corp'), (1002, 'Stark Industries');
+
+-- 2. Populate a table variable matching StagedDataType
+DECLARE @StagedInput StagedDataType;
+
+INSERT INTO @StagedInput (id, companyid, fieldofficeid, fiscalyear, wtf1, wtf2, wtf3)
+VALUES 
+    (1, '1001', '10', '2024', 100, 200, 300),          -- Success
+    (2, 'not found', '10', '2024', 50, 50, 50),         -- Fails: 'not found'
+    (3, '9999', '10', '2024', 10, 20, 30),              -- Fails: Company not in Company table
+    (4, '1001', '10', '2024', 100, 200, 300);           -- Fails: Duplicate match for groupid=3
+
+-- 3. Execute procedure
+EXEC sp_ProcessStagedData @staged_data = @StagedInput;
+
+-- 4. Check results
+SELECT * FROM CompanyGroup;
+SELECT * FROM CompanyKeyPartner;
+SELECT * FROM ErrorLog;
+Would you like an alternative set-based solution for high-volume data performance?
+
+Yes
+Using MS SQL Server 2022: 
+
+
+
+Create the following tables:
+
+
+
+a CompanyGroup table with the following columns:
+
+id, int, NOT NULL unique; companyid, int; groupid, int; fieldofficeid, int; Created, CreatedBy, Modified, ModifiedBy
+
+
+
+a CompanyKeyPartner table with the following columns:
+
+id int NOT NULL unique; companyid, int; fieldofficeid, int; companygroupid, int; fiscalyear, int; wtf1, int, null; wtf2, int, null; wtf3, int, null; Created, CreatedBy, Modified, ModifiedBy
+
+
+
+A staged_data table having the following columns:
+
+id, int, unique; companyid int; fieldofficeid int; fiscalyear int; wtf1 int null; wtf2 int null; wtf3 int null;
+
+
+
+A Company table with columns: companyid int NOT NULL; and companyname varchar(30).
+
+
+
+A FieldOffice table with columns: fieldofficeid int NOT NULL; fieldOfficeName varchar(30).
+
+
+
+Create an IngestStatus table with columns: id int; staged_data_id int; company_group_id int; company_key_partner.id; error bit default 0; and status_message (varchar(2000));  Created date;  CreatedBy varchar; Modified date; and ModifiedBy varchar.
+
+
+
+Tables with columns Created, CreatedBy, Modified, ModifiedBy should have default values from GETDATE() and SYSTEM_USER().
+
+
+
+Include a trigger to ensure that Modified and ModifiedBy fields are automatically updated.
+
+
+
+I want a stored procedure to which I can pass the table named staged_data.
+
+
+
+The procedure should do the following for each row of the staged_data table:
+
+
+
+For every row of the staged_data table being processed (the “status row”), create a row in the IngestStatus table and set IngestStatus.staged_data_id = staged_data.id.
+
+
+
+If any of staged_data.companyid, staged_data.fieldofficeid, or staged_data.fiscalyear are null, empty string, 'not found', or containing data not of the correct type (all should be ints) then in the status row set the IngestStatus.staged_data_id = staged_data.id; set IngestStatus.error = 1; set IngestStatus.status_message equal to a message indicating that an error occurred, which field or fields in the ingest_data row caused the error; then proceed to the next row.
+
+
+
+If the value in staged_data.companyid is not found in the Company.companyid column, enter a a message in IngestStatus.status_message reporting the error and include which companyid that could not be found; set IngestStatus.error=1 and skip to the next row, otherwise proceed.
+
+
+
+If the value in staged_data.fieldofficeid is not found in the FieldOffice.fieldofficeid column, enter a message in IngestStatus.status_message reporting the error and include which field office id could not be found; set IngestStatus.error=1 and skip to the next row, otherwise proceed.
+
+
+
+For any row in the CompanyGroup table, if staged_data.companyid = CompanyGroup.companyid AND staged_data.fieldofficeid = CompanyGroup.fieldofficeid
+
+AND CompanyGroup.groupid = 3, make an entry in the IngestStatus.status_message field indicating an error, that a duplicate record already existed in the CompanyGroup table with the values of companyid and fieldofficeid; skip to the next row of staged_data; otherwise proceed.
+
+
+
+The following two inserts should be treated as an atomic transaction. If there is a failure, roll back, and make an entry in the IngestStatus indicating an error. The error message should describe the error.  reference the row number of the staged_data table that failed to be processed.
+
+Enter a new row with a unique id in the CompanyGroup table. Generate a unique id for each row. Set CompanyGroup.companyid = staged_data.companyid, set CompanyGroup.groupid = 3, and set CompanyGroup.fieldofficeid = staged_data.fieldofficeid
+
+Enter a new row with a unique id in the CompanyKeyPartner table. In the CompanyKeyPartner table, set companyid = staged_data.companyid, set groupid = 3, and
+
+set fieldofficeid = staged_data.fieldofficeid; set WTF1, WTF2, WTF3, and fiscalyear values to match those in the staged_data table. Set CompanyKeyPartner.companygroupid = CompanyGroup.id.
+
+
+
+For each row of staged_data successfully processed create a success message and enter it into IngestStatus.status_message; set IngestStatus.company_group_id = CompanyGroup.companygroupid (from the row just created in the CompanyGroup table); set IngestStatus.key_partner_id = CompanyKeyPartner.key_partner_id (from the row just created in the CompanyKeyPartner table).  The value of IngestStatus.error will remain 0.
+
+
+
+If any row of the staged_data causes an error not specifically described here, that result should also be reported in a row of the IngestStatus table.
+
+
+
+Generate some sample data and SQL that demonstrated the functionality.
+
+Here is the complete SQL Server 2022 implementation, including table DDL, triggers, user-defined table type (UDTT), the stored procedure with row-by-row tracking and exception handling, and a sample test script.
+
+1. Database Schema Setup
+SQL
+-- Company Table
+CREATE TABLE Company (
+    companyid INT NOT NULL CONSTRAINT PK_Company PRIMARY KEY,
+    companyname VARCHAR(30) NULL
+);
+
+-- FieldOffice Table
+CREATE TABLE FieldOffice (
+    fieldofficeid INT NOT NULL CONSTRAINT PK_FieldOffice PRIMARY KEY,
+    fieldOfficeName VARCHAR(30) NULL
+);
+
+-- CompanyGroup Table
+CREATE TABLE CompanyGroup (
+    id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_CompanyGroup PRIMARY KEY,
+    companyid INT NULL,
+    groupid INT NULL,
+    fieldofficeid INT NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_CompanyGroup_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyGroup_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_CompanyGroup_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyGroup_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- CompanyKeyPartner Table
+CREATE TABLE CompanyKeyPartner (
+    id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_CompanyKeyPartner PRIMARY KEY,
+    companyid INT NULL,
+    fieldofficeid INT NULL,
+    companygroupid INT NULL,
+    fiscalyear INT NULL,
+    wtf1 INT NULL,
+    wtf2 INT NULL,
+    wtf3 INT NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_CompanyKeyPartner_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_CompanyKeyPartner_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- IngestStatus Table
+CREATE TABLE IngestStatus (
+    id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_IngestStatus PRIMARY KEY,
+    staged_data_id INT NULL,
+    company_group_id INT NULL,
+    company_key_partner_id INT NULL,
+    error BIT NOT NULL CONSTRAINT DF_IngestStatus_Error DEFAULT 0,
+    status_message VARCHAR(2000) NULL,
+    Created DATETIME2 NOT NULL CONSTRAINT DF_IngestStatus_Created DEFAULT GETDATE(),
+    CreatedBy VARCHAR(128) NOT NULL CONSTRAINT DF_IngestStatus_CreatedBy DEFAULT SYSTEM_USER,
+    Modified DATETIME2 NOT NULL CONSTRAINT DF_IngestStatus_Modified DEFAULT GETDATE(),
+    ModifiedBy VARCHAR(128) NOT NULL CONSTRAINT DF_IngestStatus_ModifiedBy DEFAULT SYSTEM_USER
+);
+
+-- Staged Data Table (Physical Table Definition)
+CREATE TABLE staged_data (
+    id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_staged_data PRIMARY KEY,
+    companyid INT NULL,
+    fieldofficeid INT NULL,
+    fiscalyear INT NULL,
+    wtf1 INT NULL,
+    wtf2 INT NULL,
+    wtf3 INT NULL
+);
+2. Triggers for Automatic Audit Column Updates
+SQL
+CREATE TRIGGER trg_CompanyGroup_UpdateModified
+ON CompanyGroup
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE cg
+    SET Modified = GETDATE(),
+        ModifiedBy = SYSTEM_USER
+    FROM CompanyGroup cg
+    INNER JOIN inserted i ON cg.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_CompanyKeyPartner_UpdateModified
+ON CompanyKeyPartner
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE ckp
+    SET Modified = GETDATE(),
+        ModifiedBy = SYSTEM_USER
+    FROM CompanyKeyPartner ckp
+    INNER JOIN inserted i ON ckp.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_IngestStatus_UpdateModified
+ON IngestStatus
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE ins
+    SET Modified = GETDATE(),
+        ModifiedBy = SYSTEM_USER
+    FROM IngestStatus ins
+    INNER JOIN inserted i ON ins.id = i.id;
+END;
+GO
+3. User-Defined Table Type (UDTT)
+To pass a full table structure into a stored procedure parameter in SQL Server, we define a TVP type. We use VARCHAR(50) for numerical staging fields so the stored procedure can explicitly validate raw input for invalid data types, strings like 'not found', and empty strings.
+
+SQL
+CREATE TYPE StagedDataType AS TABLE (
+    id INT,
+    companyid VARCHAR(50),
+    fieldofficeid VARCHAR(50),
+    fiscalyear VARCHAR(50),
+    wtf1 INT,
+    wtf2 INT,
+    wtf3 INT
+);
+GO
+4. Stored Procedure
+SQL
+CREATE OR ALTER PROCEDURE sp_ProcessStagedData
+    @staged_data StagedDataType READONLY
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Variable declarations for current row extraction
+    DECLARE @id INT,
+            @companyid_raw VARCHAR(50),
+            @fieldofficeid_raw VARCHAR(50),
+            @fiscalyear_raw VARCHAR(50),
+            @wtf1 INT,
+            @wtf2 INT,
+            @wtf3 INT;
+
+    -- Parsed integer values
+    DECLARE @companyid INT,
+            @fieldofficeid INT,
+            @fiscalyear INT;
+
+    -- Status tracking
+    DECLARE @status_id INT,
+            @new_companygroup_id INT,
+            @new_keypartner_id INT,
+            @err_fields VARCHAR(500);
+
+    -- Cursor to iterate through staged data row-by-row
+    DECLARE stage_cursor CURSOR LOCAL FAST_FORWARD FOR
+    SELECT id, companyid, fieldofficeid, fiscalyear, wtf1, wtf2, wtf3
+    FROM @staged_data;
+
+    OPEN stage_cursor;
+
+    FETCH NEXT FROM stage_cursor INTO 
+        @id, @companyid_raw, @fieldofficeid_raw, @fiscalyear_raw, @wtf1, @wtf2, @wtf3;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        -- Reset loop context variables
+        SET @status_id = NULL;
+        SET @new_companygroup_id = NULL;
+        SET @new_keypartner_id = NULL;
+        SET @companyid = NULL;
+        SET @fieldofficeid = NULL;
+        SET @fiscalyear = NULL;
+        SET @err_fields = '';
+
+        -- Step A: Create initial tracking entry in IngestStatus
+        INSERT INTO IngestStatus (staged_data_id, error, status_message)
+        VALUES (@id, 0, 'Processing started.');
+
+        SET @status_id = SCOPE_IDENTITY();
+
+        BEGIN TRY
+            ------------------------------------------------------------------
+            -- Validation 1: Check NULL, empty string, 'not found', or non-INT types
+            ------------------------------------------------------------------
+            -- Check companyid
+            IF @companyid_raw IS NULL OR LTRIM(RTRIM(LOWER(@companyid_raw))) IN ('', 'not found') OR TRY_CAST(@companyid_raw AS INT) IS NULL
+                SET @err_fields = CONCAT(@err_fields, 'companyid (', ISNULL(@companyid_raw, 'NULL'), '), ');
+
+            -- Check fieldofficeid
+            IF @fieldofficeid_raw IS NULL OR LTRIM(RTRIM(LOWER(@fieldofficeid_raw))) IN ('', 'not found') OR TRY_CAST(@fieldofficeid_raw AS INT) IS NULL
+                SET @err_fields = CONCAT(@err_fields, 'fieldofficeid (', ISNULL(@fieldofficeid_raw, 'NULL'), '), ');
+
+            -- Check fiscalyear
+            IF @fiscalyear_raw IS NULL OR LTRIM(RTRIM(LOWER(@fiscalyear_raw))) IN ('', 'not found') OR TRY_CAST(@fiscalyear_raw AS INT) IS NULL
+                SET @err_fields = CONCAT(@err_fields, 'fiscalyear (', ISNULL(@fiscalyear_raw, 'NULL'), '), ');
+
+            IF LEN(@err_fields) > 0
+            BEGIN
+                -- Strip trailing comma
+                SET @err_fields = LEFT(@err_fields, LEN(@err_fields) - 1);
+                
+                UPDATE IngestStatus
+                SET error = 1,
+                    status_message = CONCAT('Error: Invalid field values or non-integer types found in staged_data row ', @id, ' for field(s): ', @err_fields)
+                WHERE id = @status_id;
+
+                GOTO NextRow;
+            END
+
+            -- Successfully cast values to integer
+            SET @companyid = CAST(@companyid_raw AS INT);
+            SET @fieldofficeid = CAST(@fieldofficeid_raw AS INT);
+            SET @fiscalyear = CAST(@fiscalyear_raw AS INT);
+
+            ------------------------------------------------------------------
+            -- Validation 2: Company lookup
+            ------------------------------------------------------------------
+            IF NOT EXISTS (SELECT 1 FROM Company WHERE companyid = @companyid)
+            BEGIN
+                UPDATE IngestStatus
+                SET error = 1,
+                    status_message = CONCAT('Error: companyid ', @companyid, ' from staged_data row ', @id, ' was not found in the Company table.')
+                WHERE id = @status_id;
+
+                GOTO NextRow;
+            END
+
+            ------------------------------------------------------------------
+            -- Validation 3: FieldOffice lookup
+            ------------------------------------------------------------------
+            IF NOT EXISTS (SELECT 1 FROM FieldOffice WHERE fieldofficeid = @fieldofficeid)
+            BEGIN
+                UPDATE IngestStatus
+                SET error = 1,
+                    status_message = CONCAT('Error: fieldofficeid ', @fieldofficeid, ' from staged_data row ', @id, ' was not found in the FieldOffice table.')
+                WHERE id = @status_id;
+
+                GOTO NextRow;
+            END
+
+            ------------------------------------------------------------------
+            -- Validation 4: Duplicate record check (groupid = 3)
+            ------------------------------------------------------------------
+            IF EXISTS (
+                SELECT 1 
+                FROM CompanyGroup 
+                WHERE companyid = @companyid 
+                  AND fieldofficeid = @fieldofficeid 
+                  AND groupid = 3
+            )
+            BEGIN
+                UPDATE IngestStatus
+                SET error = 1,
+                    status_message = CONCAT('Error: A duplicate record already exists in CompanyGroup with companyid ', @companyid, ', fieldofficeid ', @fieldofficeid, ', and groupid = 3 for staged_data row ', @id, '.')
+                WHERE id = @status_id;
+
+                GOTO NextRow;
+            END
+
+            ------------------------------------------------------------------
+            -- Atomic Transaction Inserts
+            ------------------------------------------------------------------
+            BEGIN TRANSACTION;
+
+                -- Insert 1: CompanyGroup
+                INSERT INTO CompanyGroup (companyid, groupid, fieldofficeid)
+                VALUES (@companyid, 3, @fieldofficeid);
+
+                SET @new_companygroup_id = SCOPE_IDENTITY();
+
+                -- Insert 2: CompanyKeyPartner
+                INSERT INTO CompanyKeyPartner (companyid, fieldofficeid, companygroupid, fiscalyear, wtf1, wtf2, wtf3)
+                VALUES (@companyid, @fieldofficeid, @new_companygroup_id, @fiscalyear, @wtf1, @wtf2, @wtf3);
+
+                SET @new_keypartner_id = SCOPE_IDENTITY();
+
+            COMMIT TRANSACTION;
+
+            -- Log success status
+            UPDATE IngestStatus
+            SET company_group_id = @new_companygroup_id,
+                company_key_partner_id = @new_keypartner_id,
+                status_message = CONCAT('Successfully processed staged_data row ', @id, '. Created CompanyGroup ID: ', @new_companygroup_id, ' and CompanyKeyPartner ID: ', @new_keypartner_id, '.')
+            WHERE id = @status_id;
+
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0
+                ROLLBACK TRANSACTION;
+
+            -- Log unexpected or transaction failures
+            UPDATE IngestStatus
+            SET error = 1,
+                status_message = CONCAT('Error encountered during processing of staged_data row ', @id, ': ', ERROR_MESSAGE())
+            WHERE id = @status_id;
+        END CATCH
+
+        NextRow:
+        FETCH NEXT FROM stage_cursor INTO 
+            @id, @companyid_raw, @fieldofficeid_raw, @fiscalyear_raw, @wtf1, @wtf2, @wtf3;
+    END
+
+    CLOSE stage_cursor;
+    DEALLOCATE stage_cursor;
+END;
+GO
+5. Sample Data & Demonstration Script
+SQL
+-- Clean up test records
+TRUNCATE TABLE Company;
+TRUNCATE TABLE FieldOffice;
+TRUNCATE TABLE CompanyGroup;
+TRUNCATE TABLE CompanyKeyPartner;
+TRUNCATE TABLE IngestStatus;
+
+-- Seed reference data
+INSERT INTO Company (companyid, companyname) VALUES (101, 'Acme Corp'), (102, 'Globex Corp');
+INSERT INTO FieldOffice (fieldofficeid, fieldOfficeName) VALUES (500, 'North Region'), (501, 'South Region');
+
+-- Seed an existing row in CompanyGroup to trigger the duplicate rule test
+INSERT INTO CompanyGroup (companyid, groupid, fieldofficeid) VALUES (101, 3, 500);
+
+-- Prepare staged input table variable containing test scenarios
+DECLARE @SampleStagedData StagedDataType;
+
+INSERT INTO @SampleStagedData (id, companyid, fieldofficeid, fiscalyear, wtf1, wtf2, wtf3)
+VALUES 
+    (1, '102', '501', '2025', 10, 20, 30),         -- Success case
+    (2, 'not found', '500', '2025', 5, 5, 5),      -- Invalid string value ('not found')
+    (3, '102', 'ABC', '2025', 1, 2, 3),            -- Invalid data type ('ABC' non-int fieldofficeid)
+    (4, '999', '500', '2025', 1, 1, 1),            -- Company ID 999 does not exist
+    (5, '102', '999', '2025', 2, 2, 2),            -- FieldOffice ID 999 does not exist
+    (6, '101', '500', '2025', 3, 3, 3);            -- Duplicate entry match in CompanyGroup (groupid=3)
+
+-- Run procedure
+EXEC sp_ProcessStagedData @staged_data = @SampleStagedData;
+
+-- Review execution audit results
+SELECT 
+    id AS status_id,
+    staged_data_id,
+    company_group_id,
+    company_key_partner_id,
+    error,
+    status_message,
+    Created,
+    CreatedBy
+FROM IngestStatus
+ORDER BY staged_data_id;
+Would you like a set-based alternative for processing very large datasets without cursors?
+
+Yes
+
+
+
+Gemini is AI and can make mistakes.
+

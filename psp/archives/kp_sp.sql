@@ -1,5 +1,5 @@
-USE psp2
-GO
+-- USE some_demo_database
+-- GO
 
 -- Company Table
 CREATE TABLE Company (
