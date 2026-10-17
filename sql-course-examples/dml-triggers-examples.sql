@@ -50,9 +50,25 @@ VALUES (
 )
 GO
 
+INSERT INTO [Covid].[Patient] (
+    [PK_ID],
+    [FK_Covid_Variant],
+    [Age],
+    [Record_Created_Date]
+) 
+VALUES (
+    200,
+    71,
+    37, 
+    GETDATE()
+)
+GO
+
+
+
 UPDATE [Covid].[Patient]
-SET FK_Covid_Variant = 42,
-    Age = 54
+SET FK_Covid_Variant = 78,
+    Age = 111
 WHERE PK_ID = 100;
 GO
 
@@ -60,7 +76,7 @@ GO
 -- PRINT WHAT WAS INSERTED
 
 ALTER TRIGGER Covid.Tr_Patient_Audit ON Covid.Patient
-AFTER INSERT, UPDATE
+AFTER INSERT, UPDATE, DELETE
 AS
 BEGIN
     SET NOCOUNT ON
@@ -90,7 +106,72 @@ BEGIN
 
     PRINT '--- INSERTED ROWS ---';
     PRINT @msg;
-
-
 END
 
+
+SELECT SUSER_NAME();  -- sa
+select SYSTEM_USER;  -- sa
+GO
+
+-- PRINT WHAT WAS INSERTED/updated/deleted
+
+ALTER TRIGGER Covid.Tr_Patient_Audit ON Covid.Patient
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON
+    PRINT 'Patient data has been inserted or updated'
+
+    INSERT INTO Covid.PatientAudit (
+        PATIENT_PK_ID,
+        FK_Covid_Variant,
+        Age,
+        Record_Created_Date
+    )
+    SELECT
+        [PK_ID],
+        [FK_Covid_Variant],
+        [Age],
+        [Record_Created_Date]
+    FROM DELETED
+
+
+    INSERT INTO Covid.PatientAudit (
+        PATIENT_PK_ID,
+        FK_Covid_Variant,
+        Age,
+        Record_Created_Date
+    )
+    SELECT
+        [PK_ID],
+        [FK_Covid_Variant],
+        [Age],
+        [Record_Created_Date]
+    FROM INSERTED
+
+    -- Concatenate inserted rows into a single string to use with PRINT
+    DECLARE @msg NVARCHAR(MAX);
+
+    SELECT @msg = STRING_AGG(
+        CONCAT('PK_ID: ', PK_ID, ', FK_Covid_Variant: ', FK_Covid_Variant, ', Age: ', Age,  
+        ', Record_Created_Date: ', Record_Created_Date), CHAR(50)
+    )
+    FROM INSERTED;
+
+    DECLARE @del NVARCHAR(MAX);
+
+    SELECT @del = STRING_AGG(
+        CONCAT('PK_ID: ', PK_ID, ', FK_Covid_Variant: ', FK_Covid_Variant, ', Age: ', Age,  
+        ', Record_Created_Date: ', Record_Created_Date), CHAR(50)
+    )
+    FROM DELETED;
+
+
+    PRINT '--- Deleted ROWS ---';
+    PRINT @del;
+
+
+    PRINT '--- INSERTED ROWS ---';
+    PRINT @msg;
+END
+GO

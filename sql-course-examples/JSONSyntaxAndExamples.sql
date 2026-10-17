@@ -5,6 +5,60 @@
 
 --------------------------------------------------
 -- 1. JSON structure and JSON path
+/*
+JSON stores semi-structured data.
+- JSON is called "semi-structured" because it sits between two extremes: fully structured data (like a relational table with a fixed schema) and unstructured data (like free text or raw images).
+
+The two extremes
+
+1. Structured data — a PostgreSQL or SQL Server table — enforces its shape up front. Every row has the same columns, each with a declared type, and constraints (NOT NULL, UNIQUE, foreign keys) guarantee the data conforms before it's ever stored. The schema is a contract the data can't violate.
+
+2. Unstructured data — an email body, a photo, a log line of prose — has no machine-enforceable structure at all. You can store it, but a program must interpret it heuristically to extract meaning.
+
+Where JSON lands
+
+JSON gives you structure — named fields, nesting, arrays — but ***does not enforce it***:
+
+No fixed schema required.  Two records in the same "collection" of JSON can have completely different fields. Nothing stops {"name": "Alice"} and {"age": 42} from living side by side.
+
+Types are implicit and permissive. A field called price can hold a number in one object and a string "12.50" in another, and both are valid JSON.
+
+Structure is discovered, not declared. With a table, you know the shape before reading any rows. With JSON, you learn the shape by inspecting the data itself — field names, nesting depth, and whether items is an array or an object can vary record to record.
+
+Why the distinction matters in practice
+
+This maps directly onto work you've done with dlt and layered ingestion pipelines. Semi-structured data typically gets handled in stages:
+
+Land it raw — preserve the original JSON exactly as received, since there's no schema to reconstruct it from later.
+
+Infer or impose a schema — tools like dlt (or DuckDB's JSON reader, or Pydantic models) examine actual records and derive column types, nested child tables, and a business_id-style structure you can then enforce.
+
+Validate at a gate — because the source won't reject bad records, you quarantine anything that doesn't match expectations (as in your SQL Server ETL quarantine framework) before publishing to a properly structured table.
+
+So the short version: JSON describes structure but doesn't enforce it. The schema is a convention inside the data rather than a rule imposed on it — which is why it's the natural interchange format for APIs (flexible to produce) and why downstream pipelines exist to turn it into genuinely structured, constraint-backed tables (reliable to query).
+
+
+JSON is derived from JavaScript.
+
+JSON is used to transfer data between applications.
+
+JSON is used as a data format for some NOSQL document databases such as MongoDB or CosmosDB.
+
+Within SQL Server JSON enables the combination of structured tables with semi-structured NOSQL data concepts.
+
+JSON Data Types
+
+- string
+- number
+- object
+- array
+- boolean
+- null
+
+*/
+
+
+
 
 ---------------------------------
 -- Syntax
@@ -61,7 +115,30 @@ $.car.feature.list[0].colour
 
 
 --------------------------------------------------
--- 2. JSON functions
+-- 2. JSON functions (there are four)
+
+/*
+JSON is stored as plain text typically as VARCHAR or NVARCHAR.
+
+ISJSON checks to see if the stored text is a valid JSON object, array, number, string, or one of the three literal values (false, true, null).
+
+- Returns 1 for true, 0 for false.
+
+JSON_VALUE function extracts a single scalar value of type nvarchar(4000).
+
+- Accepts two parameters: an expression containing the JSON script and the JSON path specifying the property to extract.
+
+- Lax and strict modes.  Lax mode returns null; strict mode returns error.
+
+JSON_QUERY function extracts an object or array, not a scalar, from a JSON string.
+
+JSON_MODIFY(expression, path, new_value) - Update an existing value, insert a new key/value pair, or delete a key.
+
+- Lax (default) or strict mode change how JSON_MODIFY works.  Use lax mode to insert new k/v pairs.
+- set a value to null to delete it.
+
+*/
+
 
 ---------------------------------
 -- Syntax

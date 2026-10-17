@@ -1,0 +1,14 @@
+ipcalc tutorial
+
+ipcalc is a command-line utility for Linux, macOS, and Windows (WSL) that calculates network details such as **broadcast address**, **network address**, **netmask**, and **host range** from an IP address and subnet mask. It serves as a teaching tool by displaying results in binary, decimal, and hexadecimal formats, making it essential for network engineering and subnetting tasks.
+
+To begin using **ipcalc**, install it via your package manager (e.g., `sudo apt install ipcalc` on Debian/Ubuntu). The basic syntax is `ipcalc [options] [address]/[prefix | netmask]`, where you can specify an IP address either with a CIDR prefix (e.g., `/24`) or a dotted-decimal netmask.
+
+Key usage examples include:
+
+*   **Basic Network Info**: `ipcalc 192.168.1.100/24` displays the network, broadcast, netmask, and host range.
+*   **Suppress Binary Output**: Use the `-b` or `--nobinary` flag (e.g., `ipcalc -b 192.168.1.100/24`) to hide binary representations for cleaner output.
+*   **Subnetting**: Use the `-s` flag to calculate subnets for a specific number of hosts, such as `ipcalc 192.168.1.0 -s 10`.
+*   **Specific Details**: Use flags like `-n` for network address only, `-b` for broadcast only, or `-h` to generate HTML output.
+*   **Hostname Lookup**: Use `--lookup-host` to resolve a hostname to its IP address.
+
