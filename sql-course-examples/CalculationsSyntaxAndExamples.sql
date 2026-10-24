@@ -135,6 +135,8 @@ pi/2 radians = 90 degrees
 
 Trigonomic functions:
 
+You must use radians, not degrees, in SQL Server trigonometric functions.
+
 𝜃 = angle in radians (type: float)
 
 sin(𝜃)
@@ -155,8 +157,6 @@ Convert between radians and degrees:
 rad -> degrees: rad X 180/pi.  (or use sql server function DEGREES(rad))
 
 degrees -> radians: degrees X pi/180. (or use sql server function RADIANS(degrees))
-
-
 
 (𝜃)
 (𝜃)
