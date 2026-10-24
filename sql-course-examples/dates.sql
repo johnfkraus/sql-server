@@ -1,0 +1,10 @@
+SELECT 
+      [OrderDate]
+      ,[DueDate]
+      ,[ShipDate]
+      --,[ModifiedDate]
+        ,DATEADD(WEEK, 1, ShipDate) AS [ShipDate + 1 Week]
+        ,DATEADD(DAY, -1, ShipDate) AS [ShipDate - 1 Day]
+        ,DATEDIFF(DAY, ShipDate, DueDate) AS [Ship vs. Due Days Diff]
+        ,DATEPART(YEAR, OrderDate) AS [Order Year]
+  FROM [AdventureWorks2019].[Sales].[SalesOrderHeader]

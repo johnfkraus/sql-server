@@ -264,7 +264,19 @@ FOR JSON PATH, ROOT ('Root_Name'), INCLUDE_NULL_VALUES
 
 --------------------------------------------------
 -- 5. Convert JSON to a table
+/*
+OPENJSON(): a table-valued FUNCTION
+- we can treat it as if we are reading data from a table.
+ - parses JSON and returns rows and columns.
+- Use OPENJSON in the from clause of a Transact-SQL statement.  T-SQL (Transact-SQL) is Microsoft's proprietary procedural extension of SQL designed specifically for use with Microsoft SQL Server and Azure SQL Database.
 
+OPENJSON accepts two parameters:
+- a JSON expression; and
+- (optional) A path to specify what part of the JSON to be extracted.
+- The WITH clause controls the columns / schema that should be returned.
+
+
+*/
 ---------------------------------
 -- Syntax
 SELECT	*
@@ -288,7 +300,7 @@ DECLARE @json NVARCHAR(1000)
 
 SET @json = '{ "car": 
 			  {
-				  "id": "1",
+				  "id": "12",
 				  "price": "40000", 
 				  "feature": 
 				  {
@@ -305,7 +317,8 @@ SET @json = '{ "car":
 SELECT	*
 FROM	OPENJSON(@json)
 WITH (	id INT '$.car.id',
-		price NVARCHAR(50) '$.car.price',
+		-- price NVARCHAR(50) '$.car.price',
+		price INT '$.car.price',
 		Option_1_Colour NVARCHAR(50) '$.car.feature.list[0].colour',
 		Option_2_Colour NVARCHAR(50) '$.car.feature.list[1].colour',
 		Option_3_Colour NVARCHAR(50) '$.car.feature.list[2].colour'
