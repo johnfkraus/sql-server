@@ -55,8 +55,3 @@ SELECT
 
 FROM [Production].[TransactionHistory]
 
-
-
--- 
-SELECT *
-FROM [Production].[TransactionHistory]
