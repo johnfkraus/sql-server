@@ -69,7 +69,10 @@ WHERE dsacfieldoffice = 51
 UNION
 SELECT *  
 FROM CompanyImproved c
-WHERE 51 IN (SELECT value FROM OPENJSON(kpfieldoffices));
+WHERE 51 IN (SELECT value FROM OPENJSON(kpfieldoffices))
+
+
+
 
 ALTER TABLE CompanyImproved
 ADD sectorsjson NVARCHAR(MAX) NULL,
@@ -96,57 +99,170 @@ SELECT
 WHERE sectors IS NOT NULL;
 
 
-[
-  [1, 5, 8, 12],
-  [3, 7, 14],
-  [2, 4, 6, 9, 11, 15],
-  [10],
-  [5, 13, 14, 15],
-  [1, 2, 3, 4, 5],
-  [8, 11],
-  [6, 7, 9, 10, 12, 14],
-  [15],
-  [2, 6, 8, 10],
-  [4, 5, 7],
-  [1, 9, 11, 13, 14],
-  [3, 12, 15],
-  [7, 8, 9, 10, 11, 12],
-  [2, 14],
-  [1, 3, 5, 6, 13]
-]
+-- field office 51 and sectors = 2,5
+DECLARE @fieldofficeid INT = 51;
+-- DECLARE @sectors NVARCHAR(MAX) = '[2]'
+DECLARE @TargetSectors NVARCHAR(MAX) = '[2,5]';
 
-  [1, 5, 8, 12]
-  [3, 7, 14]
-  [2, 4, 6, 9, 11, 15]
-  [10]
-  [5, 13, 14, 15]
-  [1, 2, 3, 4, 5]
-  [8, 11]
-  [6, 7, 9, 10, 12, 14]
-  [15]
-  [2, 6, 8, 10]
-  [4, 5, 7]
-  [1, 9, 11, 13, 14]
-  [3, 12, 15]
-  [7, 8, 9, 10, 11, 12]
-  [2, 14]
-  [1, 3, 5, 6, 13]
-
-(1)(5)(8)(12)
-(3)(7)(14)
-(2)(4)(6)(9)(11)(15)
-(10)
-(5)(13)(14)(15)
-(1)(2)(3)(4)(5)
-(8)(11)
-(6)(7)(9)(10)(12)(14)
-(15)
-(2)(6)(8)(10)
-(4)(5)(7)
-(1)(9)(11)(13)(14)
-(3)(12)(15)
-(7)(8)(9)(10)(11)(12)
-(2)(14)
-(1)(3)(5)(6)(13)
+SELECT *  
+FROM CompanyImproved c
+WHERE aorfieldoffice = @fieldofficeid --  IN (SELECT value FROM OPENJSON(kpfieldoffices));
+UNION
+SELECT *  
+FROM CompanyImproved c
+WHERE dsacfieldoffice = @fieldofficeid
+UNION
+SELECT *  
+FROM CompanyImproved c
+WHERE @fieldofficeid IN (SELECT value FROM OPENJSON(kpfieldoffices))
+-- DECLARE @TargetSectors NVARCHAR(MAX) = '[2,5]';
+UNION
+SELECT *
+FROM CompanyImproved c
+WHERE EXISTS (
+    SELECT 1
+    FROM OPENJSON(c.sectorsjson) WITH (sector_id INT '$') AS c_sec
+    INNER JOIN OPENJSON(@TargetSectors) WITH (sector_id INT '$') AS t_sec
+        ON c_sec.sector_id = t_sec.sector_id
+);
 
 
+-- DECLARE @TargetSectors NVARCHAR(MAX) = '[2,5]';
+
+SELECT c.*
+FROM CompanyImproved c
+WHERE EXISTS (
+    SELECT 1
+    FROM OPENJSON(c.sectorsjson) WITH (sector_id INT '$') AS c_sec
+    INNER JOIN OPENJSON(@TargetSectors) WITH (sector_id INT '$') AS t_sec
+        ON c_sec.sector_id = t_sec.sector_id
+);
+GO
+
+-- any field office 51 and sectors = 2,5
+DECLARE @anyfieldofficeid NVARCHAR(MAX) = '[51,53]';
+DECLARE @kpfieldofficeid NVARCHAR(MAX) = @anyfieldofficeid;
+DECLARE @dsacfieldofficeid NVARCHAR(MAX) = @anyfieldofficeid; -- '[51,53]';
+DECLARE @TargetSectors NVARCHAR(MAX) = '[2,5]';
+DECLARE @TargetAORs NVARCHAR(MAX) = @anyfieldofficeid;
+
+SELECT c.*
+FROM CompanyImproved c
+WHERE c.aorfieldoffice IN (
+    SELECT CAST(value AS INT)
+    FROM OPENJSON(@TargetAORs)
+)
+UNION
+SELECT c.*
+FROM CompanyImproved c
+WHERE c.dsacfieldoffice IN (
+    SELECT CAST(value AS INT)
+    FROM OPENJSON(@dsacfieldofficeid)
+)
+UNION
+SELECT *  
+FROM CompanyImproved c
+WHERE @kpfieldofficeid IN (SELECT value FROM OPENJSON(kpfieldoffices))
+UNION
+SELECT *
+FROM CompanyImproved c
+WHERE EXISTS (
+    SELECT 1
+    FROM OPENJSON(c.sectorsjson) WITH (sector_id INT '$') AS c_sec
+    INNER JOIN OPENJSON(@TargetSectors) WITH (sector_id INT '$') AS t_sec
+        ON c_sec.sector_id = t_sec.sector_id
+);
+
+/*
+USING MS sql server 2022, I have a Company table with a column "sectorsjson" of type NVARCHAR(MAX). The sectorsjson column contains a json array of integers. I want to be able to select rows from the table where the json array in sectorsjson contains integer values specified in an array containing in a string like '[2,5]'. 
+
+USING MS sql server 2022, I have a Company table with a column "aorfieldoffice" of type INT. The  I want to be able to select rows from the table where the aorfieldoffice matches any of the integer values specified in an array containing in a string like '[2,5]'. 
+
+*/
+
+GO
+
+DECLARE @TargetAORs NVARCHAR(MAX) = '[51,53]';
+
+SELECT c.*
+FROM CompanyImproved c
+WHERE c.aorfieldoffice IN (
+    SELECT CAST(value AS INT)
+    FROM OPENJSON(@TargetAORs)
+);
+GO
+
+CREATE OR ALTER FUNCTION dbo.fn_GetCompanies
+(
+    @anyfieldofficeids NVARCHAR(MAX) = NULL, --  '[51,53]';
+    -- @TargetAORs NVARCHAR(MAX) = NULL,
+    @kpfieldofficeids NVARCHAR(MAX) = NULL, -- @anyfieldofficeid;
+    @dsacfieldofficeids NVARCHAR(MAX) = NULL, -- @anyfieldofficeid; -- '[51,53]';
+    @TargetSectors NVARCHAR(MAX) = NULL --  '[2,5]';
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT *
+    FROM CompanyImproved c
+    WHERE (@TargetAORs is NULL OR c.aorfieldoffice IN (
+        SELECT CAST(value AS INT)
+        FROM OPENJSON(@TargetAORs)
+    )
+      AND (@AORFieldOffice IS NULL OR AORFieldOffice = @AORFieldOffice)
+      AND (@MinEmployees IS NULL OR EmployeeCount >= @MinEmployees)
+      AND (@MaxEmployees IS NULL OR EmployeeCount <= @MaxEmployees)
+);
+GO
+
+CREATE OR ALTER FUNCTION dbo.fn_SearchCompanies
+(
+    @SectorsJSON NVARCHAR(MAX) = NULL,
+    @AORsJSON    NVARCHAR(MAX) = NULL,
+    @anyfieldofficeids NVARCHAR(MAX) = NULL, --  '[51,53]';
+    -- @TargetAORs NVARCHAR(MAX) = NULL,
+    @kpfieldofficeids NVARCHAR(MAX) = NULL, -- @anyfieldofficeid;
+    @dsacfieldofficeids NVARCHAR(MAX) = NULL, -- @anyfieldofficeid; -- '[51,53]';
+    @TargetSectors NVARCHAR(MAX) = NULL --  '[2,5]';
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT c.*
+    FROM dbo.CompanyImproved c
+    WHERE 
+        -- Condition 2: AOR Filter (Matching against an INT column 'aorfieldoffice')
+        (
+            @AORsJSON IS NULL 
+            OR @AORsJSON = '[]'
+            OR ISJSON(@AORsJSON) = 0
+            OR EXISTS (
+                SELECT 1 
+                FROM OPENJSON(@AORsJSON) WITH (aor_id INT '$') AS p_aor
+                WHERE p_aor.aor_id = c.aorfieldoffice
+            )
+        )
+        AND
+        -- Condition 1: Sector Filter (Matching against a JSON array column 'sectorsjson')
+        (
+            @SectorsJSON IS NULL 
+            OR @SectorsJSON = '[]'
+            OR ISJSON(@SectorsJSON) = 0
+            OR EXISTS (
+                SELECT 1 
+                FROM OPENJSON(c.sectorsjson) WITH (sector_id INT '$') AS c_sec
+                INNER JOIN OPENJSON(@SectorsJSON) WITH (sector_id INT '$') AS p_sec
+                    ON c_sec.sector_id = p_sec.sector_id
+            )
+        )
+
+);
+GO
+
+SELECT * 
+FROM dbo.fn_SearchCompanies(
+    @SectorsJSON = '[2,5]', 
+    @AORsJSON = '[10,12]'
+);
