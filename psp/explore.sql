@@ -38,36 +38,7 @@ INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoff
 
 
 
-
-
-
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES
-(1,'A Co.',51,51,'[51,56]',123)
-
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(3,'B Co.',52,52,'[52]',NULL)
-
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(5,'C Co.',53,53,'[53,51]',2221)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(7,'D Co.',54,55,'[55]',NULL)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(9,'E Co.',55,55,'[55]',NULL)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(11,'F, Inc.',56,56,'[56,55]',331)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(13,'G LLC',57,NULL,'[]',NULL)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(15,'H Co.',51,NULL,'[51]',NULL)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(17,'International Co.',52,NULL,'[52]',NULL)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(19,'Junk Co.',53,NULL,'[51]',NULL)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(21,'K Co.',54,NULL,'[]',854)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(23,'Lousy Co.',55,NULL,'[]',NULL)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(25,'Monkey Co.',56,NULL,'[]',44)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(27,'NoGoodCo',56,NULL,'[]',NULL)
-
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(29,'OPEN Co',51,NULL,'[]',199)
-INSERT INTO CompanyImproved(companyid, companyname, aorfieldoffice, dsacfieldoffice, kpfieldoffices, annualrevenue) VALUES(31,'Platypus Co.',51,NULL,'[]',NULL)
-
-SELECT [companyid]
-      ,[companyname]
-      ,[aorfieldoffice]
-      ,[dsacfieldoffice]
-      ,[kpfieldoffices]
-      ,[annualrevenue]
+SELECT * 
   FROM [explore_psp].[dbo].[CompanyImproved]
 
 -- OPENJSON: Parse the JSON list into a table format (rows):
@@ -100,8 +71,9 @@ SELECT *
 FROM CompanyImproved c
 WHERE 51 IN (SELECT value FROM OPENJSON(kpfieldoffices));
 
-
-
+ALTER TABLE CompanyImproved
+ADD sectorsjson NVARCHAR(MAX) NULL,
+CONSTRAINT CK_table_name_sectorsjson CHECK (sectorsjson IS NULL OR ISJSON(sectorsjson) = 1);
 
 DECLARE @input VARCHAR(100) = '(1)(2)(4)(6)(7)(12)(-11)';
 
@@ -109,6 +81,20 @@ SELECT
     '[' + STRING_AGG(REPLACE(value, '(', ''), ',') WITHIN GROUP (ORDER BY ordinal) + ']' AS JsonArray
 FROM STRING_SPLIT(@input, ')', 1)
 WHERE value LIKE '(%';
+
+
+-- Example for updating existing rows in a table:
+UPDATE CompanyImproved
+SET sectorsjson = (
+SELECT 
+    '[' + STRING_AGG(REPLACE(value, '(', ''), ',') WITHIN GROUP (ORDER BY ordinal) + ']' AS JsonArray
+    FROM STRING_SPLIT(sectors, ')', 1)
+    WHERE value LIKE '(%'
+    -- SELECT JSON_ARRAYAGG(value)
+    -- FROM STRING_SPLIT(concatenated_string_column, ',')
+)
+WHERE sectors IS NOT NULL;
+
 
 [
   [1, 5, 8, 12],
