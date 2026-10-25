@@ -1,24 +1,24 @@
 -- Examples
 SELECT *
-FROM [Production].[TransactionHistoryArchive]
+FROM [Production].[TransactionHistory]
 
 
--- Examples
+-- Concatenation
 SELECT *
-FROM [Production].[TransactionHistoryArchive]
+FROM [Production].[TransactionHistory]
 
 
--- Examples
+-- Calculation
 SELECT *
-FROM [Production].[TransactionHistoryArchive]
+FROM [Production].[TransactionHistory]
 
 
--- Examples
+-- Functions
 SELECT *
-FROM [Production].[TransactionHistoryArchive]
+FROM [Production].[TransactionHistory]
 
 
 
--- Examples
+-- 
 SELECT *
-FROM [Production].[TransactionHistoryArchive]
+FROM [Production].[TransactionHistory]
