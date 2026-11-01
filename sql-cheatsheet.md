@@ -484,3 +484,92 @@ If you are planning to build an indexed view for a specific query, let me know:
 • How frequently is data written to the underlying tables?
 
 I can help you structure the T-SQL code to ensure it meets SQL Server's schema-binding criteria!
+
+
+
+## sysname
+
+In SQL Server 2022 (using SQL Server Management Studio / SSMS), you can retrieve the server's network name or instance name using the built-in `@@SERVERNAME` system function or `SERVERPROPERTY()`.
+
+### Querying the Server Name
+
+Open a **New Query** window in SSMS and execute:
+
+```sql
+-- Returns the server (and instance) name as registered in sys.servers
+SELECT @@SERVERNAME AS [ServerName];
+
+-- Returns the actual machine name (useful if renamed after installation)
+SELECT SERVERPROPERTY('ServerName') AS [ServerProperty_ServerName],
+       SERVERPROPERTY('MachineName') AS [MachineName],
+       SERVERPROPERTY('InstanceName') AS [InstanceName];
+
+```
+
+---
+
+### Key Differences & Troubleshooting
+
+| Function / Property | What It Returns | Notes |
+| --- | --- | --- |
+| `@@SERVERNAME` | `SERVER\INSTANCE` | Returns the local server name stored in `sys.servers`. Can become outdated if the host OS was renamed after SQL Server installation. |
+| `SERVERPROPERTY('MachineName')` | `SERVER` | The actual physical or virtual Windows host name. |
+| `SERVERPROPERTY('ServerName')` | `SERVER\INSTANCE` | The current effective server and instance name. |
+
+> **Note on Data Type:** In SQL Server, `sysname` is also a built-in system data type (an alias for `nvarchar(128)` used for database object names). If you meant the `sysname` data type definition, you can query it via `SELECT * FROM sys.types WHERE name = 'sysname';`.
+
+---
+
+
+## N'string'?
+
+These are results for using ms sql server, why are strings written like String' with N?
+Search instead for using ms sql server, why are strings writtein like N'string' with N?
+AI Overview
+In MS SQL Server, prefixing a string literal with N declares the string as a Unicode (specifically UTF-16) data type (NVARCHAR or NCHAR). 
+
+Stack Overflow
+ +1
+According to contributors on sqlservercentral.com, the letter N stands for "National" (or National Language character set), which stems from the SQL-92 standard. 
+
+SQLServerCentral
+ +1
+Why You Need It
+Prevents Data Loss and Corruption: Without the N prefix, SQL Server treats the literal as a non-Unicode string (VARCHAR or CHAR). As discussed by developers on stackoverflow.com, it forces the string to pass through the database's default code page. If your string contains characters outside that specific code page (like Chinese characters, emojis, or specialized symbols), those characters will turn into unreadable question marks (???). 
+
+Level Up Coding
+ +4
+Guarantees Multilingual Support: According to users on mindstick.com, using N ensures that SQL Server evaluates the string properly, allowing it to natively support characters from virtually any written language. 
+
+Level Up Coding
+ +1
+Quick Example
+sql
+-- ❌ Without N: The characters might be corrupted depending on your database collation
+SELECT 'Hello, 世界' AS Greeting; 
+-- Output could be: Hello, ??
+
+--  With N: Tells SQL Server to explicitly preserve the Unicode data
+SELECT N'Hello, 世界' AS Greeting; 
+-- Output will be: Hello, 世界
+Use code with caution.
+⚠️ A Common Pitfall
+Simply inserting a string into an NVARCHAR column is not enough to save it from corruption. 
+sql
+-- Even if Username is an NVARCHAR column, the data is corrupted BEFORE the insert happens
+INSERT INTO Users (Username) VALUES ('世界'); 
+
+-- Correct way to preserve the characters
+INSERT INTO Users (Username) VALUES (N'世界'); 
+Use code with caution.
+If you omit the N during an insert, SQL Server converts the literal to non-Unicode first, breaks any characters it doesn't recognize, and then saves those broken characters into your Unicode column. 
+
+YouTube
+·Erik Darling (Erik Darling Data)
+ +1
+If you are interested, we can look into how this affects query performance (implicit conversions) or how to handle strings safely when using dynamic SQL. Which direction would you like to explore next? 
+
+YouTube
+·Erik Darling (Erik Darling Data)
+
+
