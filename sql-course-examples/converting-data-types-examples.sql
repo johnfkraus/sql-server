@@ -1,14 +1,16 @@
 
-https://learn.microsoft.com/en-us/sql/t-sql/functions/cast-and-convert-transact-sql?view=sql-server-ver17
+-- https://learn.microsoft.com/en-us/sql/t-sql/functions/cast-and-convert-transact-sql?view=sql-server-ver17
 
-https://learn.microsoft.com/en-us/sql/t-sql/functions/cast-and-convert-transact-sql?view=sql-server-ver17#date-and-time-styles
+-- https://learn.microsoft.com/en-us/sql/t-sql/functions/cast-and-convert-transact-sql?view=sql-server-ver17#date-and-time-styles
 
 -- CAST (expression AS data_type )
 -- CONVERT(data_type, expression, format/style)
 
+USE AdventureWorks2019
+GO
 
 -- Examples
-SELECT ActualCost
+SELECT [ActualCost]
 FROM [Production].[TransactionHistory]
 
 -- CAST

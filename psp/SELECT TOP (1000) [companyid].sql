@@ -1,0 +1,7 @@
+SELECT TOP (1000) [companyid]
+      ,[companyname]
+      ,[aorfieldoffice]
+      ,[dsacfieldoffice]
+      ,[kpfieldoffices]
+      ,[annualrevenue]
+  FROM [explore_psp].[dbo].[Company]

@@ -3,6 +3,8 @@
 -- Section Title: Calculations, functions and logic
 -- Copywrite: PADS research LTD
 
+USE AdventureWorks2019
+GO
 
 --------------------------------------------------------------
 -- 1. Aggregate functions and Grouping
@@ -99,7 +101,7 @@ ORDER BY	[SalesPersonID],[OrderDate] ASC
 SELECT	[OrderDate]
 		,[Total Sales] AS [Todays Total Sales]
 		,LAG([Total Sales], 1) OVER(ORDER BY [OrderDate]) AS [Yesterday's Total Sales] 
-		,LEAD([Total Sales], 1) OVER (ORDER BY [OrderDate]) AS [Tomorrow’s Total Sales]
+		,LEAD([Total Sales], 1) OVER (ORDER BY [OrderDate]) AS [Tomorrowï¿½s Total Sales]
 		,[Total Sales] - ISNULL(LAG([Total Sales], 1) OVER (ORDER BY [OrderDate]),0) AS [Day on day]
 FROM
 (
