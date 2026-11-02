@@ -1,0 +1,195 @@
+
+Gemini
+
+On MacOS, With Visual Studio Code, using MS SQL Server running in Podman, I want to back up a database.  How?
+
+To back up a SQL Server database running inside a Podman container on macOS using Visual Studio Code, execute the BACKUP DATABASE T-SQL command directly from VS Code and copy the .bak file out of the container to your Mac's filesystem.
+
+Step 1: Open VS Code with SQL Server Extension
+Ensure the SQL Server (mssql) extension by Microsoft is installed in VS Code.
+
+Open the SQL Server panel from the VS Code sidebar and connect to your containerized instance (typically localhost,1433 using the sa account).
+
+Step 2: Create a Container Backup Directory
+Run a terminal command to ensure a target folder exists inside the SQL Server container:
+
+Bash
+
+podman exec -it <container_name_or_id> mkdir -p /var/opt/mssql/backup
+
+(Replace <container_name_or_id> with your container name, e.g., sql2022 or mssql).
+
+Step 3: Run the Backup T-SQL Query in VS Code
+
+Open a New Query window (Cmd + N followed by setting the language mode to SQL, or right-clicking your connection in the MSSQL panel and selecting New Query).
+
+Execute the following T-SQL command to perform the backup:
+
+SQL
+BACKUP DATABASE [YourDatabaseName]
+TO DISK = N'/var/opt/mssql/backup/YourDatabaseName.bak'
+WITH FORMAT,
+     MEDIANAME = 'SQLServerBackups',
+     NAME = 'Full Backup of YourDatabaseName';
+GO
+Step 4: Copy the Backup File to Your Mac
+To bring the backup file onto your host macOS file system, open your local terminal (or VS Code's integrated terminal) and run:
+
+Bash
+
+podman cp <container_name_or_id>:/var/opt/mssql/backup/YourDatabaseName.bak ~/Desktop/YourDatabaseName.bak
+
+Container Data Persistence
+
+Files saved inside container storage are temporary unless you have mounted a persistent volume or bind-mounted a macOS folder (e.g., -v ~/sqlbackup:/var/opt/mssql/backup). Always copy .bak files to your host machine or mount a volume to prevent data loss if the container is removed.
+
+
+6:00
+How to Set Up SQL Server with Docker (2024)
+YouTube
+ · 
+Database Star
+How can I restore the database I backed up?
+
+To restore a SQL Server .bak file inside your Podman container on macOS using Visual Studio Code, ensure the backup file is accessible inside the container and execute the RESTORE DATABASE T-SQL command.
+
+Data Overwrite Warning
+Restoring over an existing database completely overwrites its current data, schema, and active state. Ensure all active queries or client connections to the target database are closed before running the restore.
+
+Step 1: Transfer the Backup File into the Container
+If your .bak file is currently on your Mac filesystem (e.g., on your Desktop), copy it into the container's backup directory using your terminal:
+
+Bash
+podman cp ~/Desktop/YourDatabaseName.bak <container_name_or_id>:/var/opt/mssql/backup/YourDatabaseName.bak
+(Replace <container_name_or_id> with your container's name or ID, such as sql2022).
+
+Step 2: Identify Logical File Names
+SQL Server tracks internal logical data and log file names inside .bak files. To check these logical names, open a New Query window in VS Code connected to your SQL Server instance and execute:
+
+SQL
+RESTORE FILELISTONLY 
+FROM DISK = N'/var/opt/mssql/backup/YourDatabaseName.bak';
+GO
+Take note of the values in the LogicalName column for both the data file (Type = D) and the log file (Type = L). By default, these are usually YourDatabaseName and YourDatabaseName_log.
+
+Step 3: Run the Restore T-SQL Query in VS Code
+Execute the following T-SQL script in VS Code to restore the database, remapping its logical files to the container's native Linux data directory (/var/opt/mssql/data/):
+
+SQL
+USE [master];
+GO
+
+-- Set single user mode to kill any active connections to the existing database
+ALTER DATABASE [YourDatabaseName] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+GO
+
+RESTORE DATABASE [YourDatabaseName]
+FROM DISK = N'/var/opt/mssql/backup/YourDatabaseName.bak'
+WITH MOVE N'YourDatabaseName' TO N'/var/opt/mssql/data/YourDatabaseName.mdf',
+     MOVE N'YourDatabaseName_log' TO N'/var/opt/mssql/data/YourDatabaseName_log.ldf',
+     REPLACE,
+     RECOVERY;
+GO
+
+-- Restore multi-user mode
+ALTER DATABASE [YourDatabaseName] SET MULTI_USER;
+GO
+Step 4: Verify Database Status
+Right-click your SQL Server connection in the VS Code MSSQL panel and select Refresh.
+
+To confirm the restore via T-SQL, run:
+
+SQL
+SELECT name, state_desc 
+FROM sys.databases 
+WHERE name = 'YourDatabaseName';
+GO
+Verification: The state_desc column should return ONLINE.
+
+Want me to show you how to automate database backup and restore cycles using bash scripts?
+
+Yes
+In docker desktop on macos, I want to open a second ms sql server instance. How?
+
+To run a second, isolated MS SQL Server instance alongside your existing container, spin up a new container using a different container name, distinct host port mapping (e.g., mapping host port 1434 to container port 1433), and separate volume storage paths.
+
+Step 1: Launch the Second SQL Server Container
+Run the following command in your terminal (using docker or podman):
+
+Bash
+
+docker run -e "ACCEPT_EULA=Y" \
+  -e "MSSQL_SA_PASSWORD=YourStrongPassword123!" \
+  -p 1434:1433 \
+  --name mssql2 \
+  -d mcr.microsoft.com/mssql/server:2022-latest
+
+
+docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=Password123?" -p 1434:1433 --name mssql2 -d mcr.microsoft.com/mssql/server:2022-latest
+
+
+
+blauerbock Downloads % docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=Password123?" -p 1434:1433 --name mssql2 -d mcr.microsoft.com/mssql/server:2022-latest
+
+WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
+966f0094099a04ca283d5b90ba9e70749a1a0995bdcc773dcfdded6869e82d8a
+
+Key Differences for the Second Instance:
+
+Host Port (-p 1434:1433): Remaps container port 1433 to host port 1434 to prevent port conflicts with your existing instance.
+
+Container Name (--name mssql2): Assigns a unique name to identify and manage the second container.
+
+Step 2: Connect in VS Code
+
+Open the SQL Server (mssql) extension sidebar in VS Code.
+
+Click + (Add Connection).
+
+Enter the connection details:
+
+Server Name / IP: localhost,1434 (Note the comma before the port number)
+
+Database: master (or leave blank)
+
+Authentication Type: SQL Login
+
+User: sa
+
+Password: YourStrongPassword123!  Password123?
+
+Display Name: MSSQL-Instance-2
+
+Verification: Expand your new connection profile MSSQL-Instance-2 in the VS Code panel and execute SELECT @@SERVERNAME, @@VERSION; in a query window to verify it is online and independent.
+
+Port Binding Conflicts
+If port 1434 is already bound by another service on your Mac, docker run will fail with a port allocation error. Change -p 1434:1433 to another free port such as -p 1435:1433 and update your VS Code connection string to match (localhost,1435).
+
+
+20:26
+SQL Server On Docker + deploy DB to Azure
+YouTube
+ · 
+Dustin Vannoy
+If you run into issues or need steps for your specific setup:
+
+Docker Compose setup
+
+Persist data volumes
+
+Copy data between instances
+Want me to show you how to set up Docker Compose to manage both SQL Server containers simultaneously?
+
+Yes
+
+
+
+
+Gemini is AI and can make mistakes.
+
+
+
+
+
+docker run --hostname=966f0094099a --user=mssql --mac-address=72:06:ee:54:28:2b --env=MSSQL_SA_PASSWORD=Password123? --env=ACCEPT_EULA=Y --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin --env=MSSQL_RPC_PORT=135 --env=CONFIG_EDGE_BUILD= --env=MSSQL_PID=developer --network=bridge -p 1434:1433 --restart=no --label='com.microsoft.product=Microsoft SQL Server' --label='com.microsoft.version=16.0.4265.3' --label='org.opencontainers.image.ref.name=ubuntu' --label='org.opencontainers.image.version=22.04' --label='vendor=Microsoft' --runtime=runc -d mcr.microsoft.com/mssql/server:2022-latest
+

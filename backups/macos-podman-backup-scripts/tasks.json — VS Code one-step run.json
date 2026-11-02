@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "mssql: migrate (run)",
+      "type": "shell",
+      "command": "./migrate.sh",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "mssql: migrate (dry run)",
+      "type": "shell",
+      "command": "./migrate.sh",
+      "options": { "env": { "DRY_RUN": "true" } },
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    }
+  ]
+}
